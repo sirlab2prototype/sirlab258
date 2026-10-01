@@ -1,0 +1,4 @@
+[submodule "ros2_ws/src/indy-ros2"]
+	path = ros2_ws/src/external/indy-ros2
+	url = https://github.com/neuromeka-robotics/indy-ros2.git
+	branch = jazzy-indyDCP3
