@@ -1,0 +1,7 @@
+catkin-pkg==1.1.1
+empy==4.2.1
+lark-parser==0.12.0
+PyYAML==6.0.1
+Jinja2==3.1.6
+typeguard==4.6.0
+neuromeka==3.4.2.2
