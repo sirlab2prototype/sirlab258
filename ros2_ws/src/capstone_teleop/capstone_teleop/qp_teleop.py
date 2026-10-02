@@ -31,6 +31,7 @@ class QPTeleop(Node):
         self.declare_parameter('indy_ip', '192.168.1.10')
         self.declare_parameter('control_hz', 30.0)
         self.declare_parameter('linear_step_mm', 5.0)
+        self.declare_parameter('angular_speed_rad_s', 0.3)
         self.declare_parameter('joint_speed_deg_s', 45.0)
         self.declare_parameter('soft_margin_deg', 15.0)
         self.declare_parameter('vel_ratio', 0.8)
@@ -40,6 +41,9 @@ class QPTeleop(Node):
         self.hz = float(self.get_parameter('control_hz').value)
         self.linear_step = float(
             self.get_parameter('linear_step_mm').value
+        )
+        self.angular_speed = float(
+            self.get_parameter('angular_speed_rad_s').value
         )
         self.joint_speed = float(
             self.get_parameter('joint_speed_deg_s').value
@@ -97,7 +101,7 @@ class QPTeleop(Node):
             'QP teleop ready | '
             'Share = ARM/DISARM | '
             'RT/LT=X, right stick=Y/Z | '
-            'rotation disabled for this test'
+            'left stick=Rx/Ry, LB/RB=Rz'
         )
 
     def joint_callback(self, msg):
@@ -287,6 +291,12 @@ class QPTeleop(Node):
         right_x = shape_axis(joy.axes[3])
         right_y = shape_axis(joy.axes[4])
 
+        left_x = shape_axis(joy.axes[0])
+        left_y = shape_axis(joy.axes[1])
+
+        lb = float(joy.buttons[4])
+        rb = float(joy.buttons[5])
+
         raw_translation = np.array([
             (rt - lt) * self.linear_step,
             right_x * self.linear_step,
@@ -297,7 +307,18 @@ class QPTeleop(Node):
             raw_translation
         )
 
-        if np.linalg.norm(translation) < 1e-6:
+        angular_step = self.angular_speed / self.hz
+
+        rotation = np.array([
+            left_x * angular_step,
+            left_y * angular_step,
+            (rb - lb) * angular_step,
+        ])
+
+        if (
+            np.linalg.norm(translation) < 1e-6
+            and np.linalg.norm(rotation) < 1e-6
+        ):
             return
 
         commanded_joint = (
@@ -308,6 +329,7 @@ class QPTeleop(Node):
             step = qp_step(
                 commanded_joint,
                 translation,
+                rotation_rad=rotation,
                 control_hz=self.hz,
                 soft_margin_deg=self.soft_margin,
                 max_joint_speed_deg_s=self.joint_speed,

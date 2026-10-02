@@ -195,6 +195,7 @@ def _bounded_least_squares(a, b, lower, upper):
 def qp_step(
     commanded_joint_deg,
     translation_mm,
+    rotation_rad=None,
     *,
     control_hz=30.0,
     soft_margin_deg=15.0,
@@ -205,6 +206,11 @@ def qp_step(
 ):
     q = np.asarray(commanded_joint_deg, dtype=float)
     translation = np.asarray(translation_mm, dtype=float)
+
+    if rotation_rad is None:
+        rotation = np.zeros(3)
+    else:
+        rotation = np.asarray(rotation_rad, dtype=float)
 
     lower_limit = JOINT_MIN_DEG + soft_margin_deg
     upper_limit = JOINT_MAX_DEG - soft_margin_deg
@@ -236,7 +242,7 @@ def qp_step(
 
     b = np.concatenate([
         translation,
-        np.zeros(3),
+        orientation_weight * rotation,
         centering_weight * centering,
         np.zeros(6),
     ])
