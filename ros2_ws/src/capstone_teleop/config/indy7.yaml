@@ -1,0 +1,13 @@
+qp_teleop:
+  ros__parameters:
+    capstone_home_joint_deg:
+      - 0.005221
+      - 40.003174
+      - -129.996640
+      - 90.000870
+      - 0.000435
+      - 90.507
+
+    # 새 capstone에서 정한 저속 Home 이동 설정
+    capstone_home_vel_ratio: 18.0
+    capstone_home_acc_ratio: 100.0

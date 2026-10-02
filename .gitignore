@@ -1,19 +1,23 @@
-# ROS 2
-build/
-install/
-log/
 
-# Python
-.venv/
+build/
+.DS_Store
+.idea/
+# IDE / OS
+install/
+# Local runtime / backup
+*.log
+log/
+*.pyc
 __pycache__/
 *.py[cod]
 .pytest_cache/
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-
+# Python
+# ROS 2
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
 # Runtime / temporary
-*.log
+teleop_params_backup.json
 tmp/
+.venv/
+.vscode/

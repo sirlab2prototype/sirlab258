@@ -88,6 +88,49 @@ class QPTeleop(Node):
 
         self.indy = IndyDCP3(self.indy_ip)
 
+        self.declare_parameter(
+            'capstone_home_joint_deg',
+            [
+                0.005221,
+                40.003174,
+                -129.996640,
+                90.000870,
+                0.000435,
+                90.507,
+            ],
+        )
+        self.declare_parameter(
+            'capstone_home_vel_ratio',
+            10.0,
+        )
+        self.declare_parameter(
+            'capstone_home_acc_ratio',
+            10.0,
+        )
+
+        self.capstone_home_joint_deg = [
+            float(v)
+            for v in self.get_parameter(
+                'capstone_home_joint_deg'
+            ).value
+        ]
+
+        if len(self.capstone_home_joint_deg) != 6:
+            raise ValueError(
+                'capstone_home_joint_deg must contain 6 values'
+            )
+
+        self.capstone_home_vel_ratio = float(
+            self.get_parameter(
+                'capstone_home_vel_ratio'
+            ).value
+        )
+        self.capstone_home_acc_ratio = float(
+            self.get_parameter(
+                'capstone_home_acc_ratio'
+            ).value
+        )
+
         self.indy_service_client = self.create_client(
             IndyService,
             '/indy_srv',
@@ -213,10 +256,7 @@ class QPTeleop(Node):
                 )
             elif y:
                 self.view_combo_used = True
-                self.request_robot_command(
-                    MSG_MOVE_HOME,
-                    'Home',
-                )
+                self.request_capstone_home()
 
         # Share remains the normal QP ARM/DISARM button.
         if not view and share and not self.last_share:
@@ -277,6 +317,74 @@ class QPTeleop(Node):
         except Exception as exc:
             self.get_logger().error(
                 f'Gripper {label} service failed: {exc}'
+            )
+
+    def request_capstone_home(self):
+        if self.armed or self.arming:
+            self.disarm('capstone home')
+
+        if not self.indy_service_client.service_is_ready():
+            self.get_logger().error(
+                'Cannot move HOME: /indy_srv unavailable'
+            )
+            return
+
+        if (
+            self.command_future is not None
+            and not self.command_future.done()
+        ):
+            self.get_logger().warning(
+                'Robot command already in progress'
+            )
+            return
+
+        # First make sure TELE_OP has fully stopped.
+        request = IndyService.Request()
+        request.data = MSG_TELE_STOP
+
+        self.get_logger().warning(
+            'Preparing CAPSTONE HOME...'
+        )
+
+        self.command_future = (
+            self.indy_service_client.call_async(request)
+        )
+        self.command_future.add_done_callback(
+            self.capstone_home_after_stop
+        )
+
+    def capstone_home_after_stop(self, future):
+        try:
+            response = future.result()
+
+            if not response.success:
+                self.get_logger().error(
+                    'Could not stop TELE_OP before HOME'
+                )
+                return
+
+            motion = self.indy.get_motion_data()
+
+            if motion.get('is_in_motion', False):
+                self.get_logger().error(
+                    'Cannot move HOME: robot still moving'
+                )
+                return
+
+            self.get_logger().warning(
+                'Moving to CAPSTONE HOME: '
+                f'{self.capstone_home_joint_deg}'
+            )
+
+            self.indy.movej(
+                jtarget=self.capstone_home_joint_deg,
+                vel_ratio=self.capstone_home_vel_ratio,
+                acc_ratio=self.capstone_home_acc_ratio,
+            )
+
+        except Exception as exc:
+            self.get_logger().error(
+                f'CAPSTONE HOME failed: {exc}'
             )
 
     def request_robot_command(self, data, label):
