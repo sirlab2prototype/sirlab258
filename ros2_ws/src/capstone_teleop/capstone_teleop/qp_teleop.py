@@ -8,6 +8,8 @@ import rclpy
 
 from rclpy.node import Node
 from sensor_msgs.msg import Joy, JointState
+from indy_interfaces.srv import IndyService
+from std_srvs.srv import Trigger
 
 from neuromeka import IndyDCP3
 
@@ -22,6 +24,12 @@ from .qp_core import (
 
 
 TELE_JOINT_RELATIVE = 11
+
+MSG_RECOVER = 1
+MSG_MOVE_HOME = 2
+MSG_MOVE_ZERO = 3
+MSG_TELE_JOINT_RLT = 7
+MSG_TELE_STOP = 8
 
 
 class QPTeleop(Node):
@@ -66,6 +74,8 @@ class QPTeleop(Node):
 
         self.armed = False
         self.last_share = 0
+        self.last_a = 0
+        self.last_b = 0
 
         self.origin_joint = None
         self.relative_joint = np.zeros(6)
@@ -77,6 +87,26 @@ class QPTeleop(Node):
         )
 
         self.indy = IndyDCP3(self.indy_ip)
+
+        self.indy_service_client = self.create_client(
+            IndyService,
+            '/indy_srv',
+        )
+
+        self.gripper_grasp_client = self.create_client(
+            Trigger,
+            '/gripper/grasp',
+        )
+
+        self.gripper_open_client = self.create_client(
+            Trigger,
+            '/gripper/open',
+        )
+        self.command_future = None
+        self.mode_future = None
+        self.arming = False
+        self.waiting_for_fresh_joint = False
+        self.arm_token = 0
 
         self.create_subscription(
             Joy,
@@ -129,6 +159,24 @@ class QPTeleop(Node):
 
         self.last_joint_time = time.monotonic()
 
+        # /indy_srv enters TELE_OP synchronously.
+        # Joint-state publication can pause during that transition.
+        # Finish ARM only after a fresh state arrives again.
+        if self.arming and self.waiting_for_fresh_joint:
+            self.origin_joint = self.joint_deg.copy()
+            self.relative_joint.fill(0.0)
+            self.cart_filter.reset()
+
+            self.last_joy_time = time.monotonic()
+
+            self.waiting_for_fresh_joint = False
+            self.arming = False
+            self.armed = True
+
+            self.get_logger().warning(
+                'QP TELEOP ARMED'
+            )
+
     def joy_callback(self, msg):
         if len(msg.axes) < 8 or len(msg.buttons) < 12:
             return
@@ -137,16 +185,157 @@ class QPTeleop(Node):
         self.last_joy_time = time.monotonic()
 
         share = int(msg.buttons[11])
+        view = int(msg.buttons[6])
+        a = int(msg.buttons[0])
+        b = int(msg.buttons[1])
+        y = int(msg.buttons[3])
 
-        if share and not self.last_share:
+        # View acts as a safety modifier.
+        # Pressing it immediately disables active teleop.
+        if view and not getattr(self, 'last_view', 0):
+            if self.armed or self.arming:
+                self.disarm('view button')
+            self.view_combo_used = False
+
+        # System commands are triggered only while View is held.
+        if view and not getattr(self, 'view_combo_used', False):
+            if a:
+                self.view_combo_used = True
+                self.request_robot_command(
+                    MSG_RECOVER,
+                    'Recover',
+                )
+            elif b:
+                self.view_combo_used = True
+                self.request_robot_command(
+                    MSG_MOVE_ZERO,
+                    'Zero',
+                )
+            elif y:
+                self.view_combo_used = True
+                self.request_robot_command(
+                    MSG_MOVE_HOME,
+                    'Home',
+                )
+
+        # Share remains the normal QP ARM/DISARM button.
+        if not view and share and not self.last_share:
             if self.armed:
                 self.disarm('operator')
             else:
                 self.arm()
 
+        # Normal A/B control the Mark7 gripper.
+        # View combinations above take priority.
+        if not view:
+            if a and not self.last_a:
+                self.request_gripper(
+                    self.gripper_grasp_client,
+                    'Grasp',
+                )
+
+            if b and not self.last_b:
+                self.request_gripper(
+                    self.gripper_open_client,
+                    'Open',
+                )
+
         self.last_share = share
+        self.last_view = view
+        self.last_a = a
+        self.last_b = b
+
+    def request_gripper(self, client, label):
+        if not client.service_is_ready():
+            self.get_logger().error(
+                f'Gripper service unavailable: {label}'
+            )
+            return
+
+        request = Trigger.Request()
+        future = client.call_async(request)
+
+        future.add_done_callback(
+            lambda f, name=label:
+                self.gripper_command_done(f, name)
+        )
+
+    def gripper_command_done(self, future, label):
+        try:
+            response = future.result()
+
+            if response.success:
+                self.get_logger().info(
+                    f'Gripper {label}: {response.message}'
+                )
+            else:
+                self.get_logger().error(
+                    f'Gripper {label} failed: '
+                    f'{response.message}'
+                )
+
+        except Exception as exc:
+            self.get_logger().error(
+                f'Gripper {label} service failed: {exc}'
+            )
+
+    def request_robot_command(self, data, label):
+        if (
+            self.command_future is not None
+            and not self.command_future.done()
+        ):
+            self.get_logger().warning(
+                'Robot command already in progress'
+            )
+            return
+
+        if not self.indy_service_client.service_is_ready():
+            self.get_logger().error(
+                '/indy_srv is not available'
+            )
+            return
+
+        request = IndyService.Request()
+        request.data = data
+
+        self.get_logger().warning(
+            f'Requesting {label}'
+        )
+
+        self.command_future = (
+            self.indy_service_client.call_async(request)
+        )
+
+        self.command_future.add_done_callback(
+            lambda future, command=label:
+                self.robot_command_done(
+                    future,
+                    command,
+                )
+        )
+
+    def robot_command_done(self, future, label):
+        try:
+            response = future.result()
+
+            if response.success:
+                self.get_logger().warning(
+                    f'{label} command accepted'
+                )
+            else:
+                self.get_logger().error(
+                    f'{label} failed: {response.message}'
+                )
+
+        except Exception as exc:
+            self.get_logger().error(
+                f'{label} service failed: {exc}'
+            )
 
     def arm(self):
+        if self.armed or self.arming:
+            return
+
         if self.joint_deg is None:
             self.get_logger().error(
                 'Cannot arm: no /joint_states yet'
@@ -162,9 +351,11 @@ class QPTeleop(Node):
             )
             return
 
-        self.origin_joint = self.joint_deg.copy()
-        self.relative_joint.fill(0.0)
-        self.cart_filter.reset()
+        if not self.indy_service_client.service_is_ready():
+            self.get_logger().error(
+                'Cannot arm: /indy_srv is not available'
+            )
+            return
 
         try:
             self.indy.set_teleop_params(
@@ -172,90 +363,101 @@ class QPTeleop(Node):
                 cutoff_freq=8.0,
                 error_gain=10.0,
             )
-
-            op_state = int(
-                self.indy.get_control_data()['op_state']
-            )
-
-            # If a previous teleop session is still active,
-            # stop it cleanly before starting joint-relative mode.
-            if op_state == 17:
-                self.indy.stop_teleop()
-
-                deadline = time.monotonic() + 2.0
-                while time.monotonic() < deadline:
-                    op_state = int(
-                        self.indy.get_control_data()['op_state']
-                    )
-                    if op_state != 17:
-                        break
-                    time.sleep(0.05)
-
-            # Enter joint-relative teleop and wait until the
-            # controller actually reports TELE_OP.
-            teleop_ready = False
-
-            for _ in range(5):
-                self.indy.start_teleop(
-                    method=TELE_JOINT_RELATIVE
-                )
-
-                deadline = time.monotonic() + 1.0
-
-                while time.monotonic() < deadline:
-                    op_state = int(
-                        self.indy.get_control_data()['op_state']
-                    )
-
-                    if op_state == 17:
-                        teleop_ready = True
-                        break
-
-                    time.sleep(0.05)
-
-                if teleop_ready:
-                    break
-
-            if not teleop_ready:
-                raise RuntimeError(
-                    f'Failed to enter TELE_OP '
-                    f'(last op_state={op_state})'
-                )
-
         except Exception as exc:
             self.get_logger().error(
-                f'Could not start teleop: {exc}'
+                f'Could not set teleop parameters: {exc}'
             )
             return
 
-        # Capture a fresh origin only after TELE_OP is ready.
-        self.origin_joint = self.joint_deg.copy()
-        self.relative_joint.fill(0.0)
-        self.cart_filter.reset()
+        self.arming = True
+        self.arm_token += 1
+        token = self.arm_token
 
-        self.armed = True
+        self.cart_filter.reset()
+        self.relative_joint.fill(0.0)
+
+        request = IndyService.Request()
+        request.data = MSG_TELE_JOINT_RLT
 
         self.get_logger().warning(
-            'QP TELEOP ARMED'
+            'QP TELEOP ARMING...'
+        )
+
+        self.mode_future = (
+            self.indy_service_client.call_async(request)
+        )
+
+        self.mode_future.add_done_callback(
+            lambda future, t=token:
+                self.arm_done(future, t)
+        )
+
+    def arm_done(self, future, token):
+        if token != self.arm_token:
+            return
+
+        try:
+            response = future.result()
+
+            if not response.success:
+                self.arming = False
+                self.get_logger().error(
+                    f'Could not enter joint-relative TELE_OP: '
+                    f'{response.message}'
+                )
+                return
+
+        except Exception as exc:
+            self.arming = False
+            self.get_logger().error(
+                f'Teleop start service failed: {exc}'
+            )
+            return
+
+        # Do NOT check joint-state freshness here.
+        # The official driver may pause its joint-state timer while
+        # servicing the TELE_OP transition.
+        #
+        # joint_callback() will complete ARM as soon as the next
+        # fresh robot state arrives.
+        self.waiting_for_fresh_joint = True
+
+        self.get_logger().info(
+            'TELE_OP ready; waiting for fresh /joint_states'
         )
 
     def disarm(self, reason):
-        if not self.armed:
+        if not self.armed and not self.arming:
             return
 
+        # Invalidate any pending ARM callback immediately.
+        self.arm_token += 1
+        self.arming = False
+        self.waiting_for_fresh_joint = False
         self.armed = False
-        self.cart_filter.reset()
 
-        try:
-            self.indy.stop_teleop()
-        except Exception as exc:
-            self.get_logger().error(
-                f'stop_teleop failed: {exc}'
-            )
+        self.cart_filter.reset()
+        self.relative_joint.fill(0.0)
 
         self.get_logger().warning(
             f'QP TELEOP DISARMED: {reason}'
         )
+
+        if self.indy_service_client.service_is_ready():
+            request = IndyService.Request()
+            request.data = MSG_TELE_STOP
+
+            self.mode_future = (
+                self.indy_service_client.call_async(request)
+            )
+        else:
+            # Safety fallback if ROS service is unavailable.
+            try:
+                self.indy.stop_teleop()
+            except Exception as exc:
+                self.get_logger().error(
+                    f'stop_teleop fallback failed: {exc}'
+                )
 
     def control_loop(self):
         if not self.armed:
@@ -266,7 +468,7 @@ class QPTeleop(Node):
         if (
             self.latest_joy is None
             or self.last_joy_time is None
-            or now - self.last_joy_time > 0.25
+            or now - self.last_joy_time > 0.5
         ):
             self.disarm('joy timeout')
             return

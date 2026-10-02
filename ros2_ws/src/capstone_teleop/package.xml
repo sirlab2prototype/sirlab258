@@ -19,4 +19,8 @@
   <export>
     <build_type>ament_python</build_type>
   </export>
+  <depend>indy_interfaces</depend>
+
+  <depend>std_srvs</depend>
+
 </package>
