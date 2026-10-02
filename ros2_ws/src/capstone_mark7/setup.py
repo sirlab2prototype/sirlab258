@@ -1,3 +1,4 @@
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'capstone_mark7'
@@ -10,12 +11,16 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (
+            'share/' + package_name + '/config',
+            glob('config/*.yaml'),
+        ),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='sirlab2',
     maintainer_email='devcernn1348@gmail.com',
-    description='TODO: Package description',
+    description='Minimal ROS 2 interface for the Mark7 gripper.',
     license='TODO: License declaration',
     extras_require={
         'test': [

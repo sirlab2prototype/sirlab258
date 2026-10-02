@@ -23,7 +23,7 @@ setup(
     zip_safe=True,
     maintainer='sirlab2',
     maintainer_email='devcernn1348@gmail.com',
-    description='TODO: Package description',
+    description='Indy7 Xbox QP teleoperation and capstone launch orchestration.',
     license='TODO: License declaration',
     extras_require={
         'test': [
@@ -32,8 +32,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'xbox_mapper = capstone_teleop.xbox_mapper:main',
             'qp_teleop = capstone_teleop.qp_teleop:main',
+            'teleop_gui = capstone_teleop.teleop_gui:main',
         ],
     },
 )

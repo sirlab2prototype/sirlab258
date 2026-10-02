@@ -48,51 +48,6 @@ def shape_trigger(raw, deadzone=0.08, exponent=2.0):
     return amount ** exponent
 
 
-class CartesianFilter:
-    def __init__(
-        self,
-        control_hz=30.0,
-        acceleration_mm_s2=300.0,
-        alpha=0.35,
-    ):
-        self.hz = float(control_hz)
-        self.accel = float(acceleration_mm_s2)
-        self.alpha = float(alpha)
-
-        self.filtered = np.zeros(3)
-        self.output = np.zeros(3)
-
-    def reset(self):
-        self.filtered.fill(0.0)
-        self.output.fill(0.0)
-
-    def update(self, target_mm_tick):
-        target = np.asarray(target_mm_tick, dtype=float)
-
-        if np.linalg.norm(target) < 1e-12:
-            self.filtered.fill(0.0)
-        else:
-            self.filtered += self.alpha * (target - self.filtered)
-
-        delta = self.filtered - self.output
-
-        # acceleration [mm/s²] -> max change of [mm/tick] per tick
-        max_change = self.accel / (self.hz ** 2)
-
-        norm = float(np.linalg.norm(delta))
-        if norm > max_change:
-            delta *= max_change / norm
-
-        self.output += delta
-
-        if (
-            np.linalg.norm(target) < 1e-12
-            and np.linalg.norm(self.output) < 1e-4
-        ):
-            self.reset()
-
-        return self.output.copy()
-
 
 def _rpy(rpy):
     r, p, y = rpy

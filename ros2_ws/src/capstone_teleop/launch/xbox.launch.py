@@ -38,4 +38,11 @@ def generate_launch_description():
                 {'indy_ip': indy_ip},
             ],
         ),
+
+        Node(
+            package='capstone_teleop',
+            executable='teleop_gui',
+            name='teleop_gui',
+            output='screen',
+        ),
     ])

@@ -10,11 +10,11 @@ from rclpy.node import Node
 from sensor_msgs.msg import Joy, JointState
 from indy_interfaces.srv import IndyService
 from std_srvs.srv import Trigger
+from std_msgs.msg import Float64, String
 
 from neuromeka import IndyDCP3
 
 from .qp_core import (
-    CartesianFilter,
     JOINT_MAX_DEG,
     JOINT_MIN_DEG,
     qp_step,
@@ -23,10 +23,7 @@ from .qp_core import (
 )
 
 
-TELE_JOINT_RELATIVE = 11
-
 MSG_RECOVER = 1
-MSG_MOVE_HOME = 2
 MSG_MOVE_ZERO = 3
 MSG_TELE_JOINT_RLT = 7
 MSG_TELE_STOP = 8
@@ -39,16 +36,44 @@ class QPTeleop(Node):
         self.declare_parameter('indy_ip', '192.168.1.10')
         self.declare_parameter('control_hz', 30.0)
         self.declare_parameter('linear_step_mm', 5.0)
+        self.declare_parameter('linear_step_delta_mm', 0.25)
+        self.declare_parameter('min_linear_step_mm', 0.25)
+        self.declare_parameter('max_linear_step_mm', 5.0)
         self.declare_parameter('angular_speed_rad_s', 0.3)
         self.declare_parameter('joint_speed_deg_s', 45.0)
         self.declare_parameter('soft_margin_deg', 15.0)
         self.declare_parameter('vel_ratio', 0.8)
         self.declare_parameter('acc_ratio', 1.0)
 
+        # QP tuning
+        self.declare_parameter('orientation_weight', 25.0)
+        self.declare_parameter('centering_weight', 0.08)
+        self.declare_parameter('damping', 0.04)
+
+        # Xbox input shaping
+        self.declare_parameter('stick_deadzone', 0.18)
+        self.declare_parameter('stick_exponent', 2.0)
+        self.declare_parameter('trigger_deadzone', 0.08)
+        self.declare_parameter('trigger_exponent', 2.0)
+
+        # Indy TELE_OP controller tuning
+        self.declare_parameter('teleop_smooth_factor', 0.5)
+        self.declare_parameter('teleop_cutoff_freq', 8.0)
+        self.declare_parameter('teleop_error_gain', 10.0)
+
         self.indy_ip = str(self.get_parameter('indy_ip').value)
         self.hz = float(self.get_parameter('control_hz').value)
         self.linear_step = float(
             self.get_parameter('linear_step_mm').value
+        )
+        self.linear_step_delta = float(
+            self.get_parameter('linear_step_delta_mm').value
+        )
+        self.min_linear_step = float(
+            self.get_parameter('min_linear_step_mm').value
+        )
+        self.max_linear_step = float(
+            self.get_parameter('max_linear_step_mm').value
         )
         self.angular_speed = float(
             self.get_parameter('angular_speed_rad_s').value
@@ -66,6 +91,41 @@ class QPTeleop(Node):
             self.get_parameter('acc_ratio').value
         )
 
+        self.orientation_weight = float(
+            self.get_parameter('orientation_weight').value
+        )
+        self.centering_weight = float(
+            self.get_parameter('centering_weight').value
+        )
+        self.damping = float(
+            self.get_parameter('damping').value
+        )
+
+        self.stick_deadzone = float(
+            self.get_parameter('stick_deadzone').value
+        )
+        self.stick_exponent = float(
+            self.get_parameter('stick_exponent').value
+        )
+        self.trigger_deadzone = float(
+            self.get_parameter('trigger_deadzone').value
+        )
+        self.trigger_exponent = float(
+            self.get_parameter('trigger_exponent').value
+        )
+
+        self.teleop_smooth_factor = float(
+            self.get_parameter('teleop_smooth_factor').value
+        )
+        self.teleop_cutoff_freq = float(
+            self.get_parameter('teleop_cutoff_freq').value
+        )
+        self.teleop_error_gain = float(
+            self.get_parameter('teleop_error_gain').value
+        )
+
+        self._validate_parameters()
+
         self.latest_joy = None
         self.last_joy_time = None
 
@@ -76,15 +136,11 @@ class QPTeleop(Node):
         self.last_share = 0
         self.last_a = 0
         self.last_b = 0
+        self.last_lb = 0
+        self.last_rb = 0
 
         self.origin_joint = None
         self.relative_joint = np.zeros(6)
-
-        self.cart_filter = CartesianFilter(
-            control_hz=self.hz,
-            acceleration_mm_s2=300.0,
-            alpha=0.35,
-        )
 
         self.indy = IndyDCP3(self.indy_ip)
 
@@ -146,10 +202,38 @@ class QPTeleop(Node):
             '/gripper/open',
         )
         self.command_future = None
+
+        self.speed_pub = self.create_publisher(
+            Float64,
+            '/capstone/teleop_speed_mm',
+            10,
+        )
+
+        self.status_pub = self.create_publisher(
+            String,
+            '/capstone/teleop_status',
+            10,
+        )
+
+        self.create_timer(
+            0.5,
+            self.publish_speed,
+        )
+
+        self.create_timer(
+            0.2,
+            self.publish_status,
+        )
         self.mode_future = None
         self.arming = False
         self.waiting_for_fresh_joint = False
         self.arm_token = 0
+
+        # Auto-arm is allowed only at startup and after CAPSTONE HOME.
+        # Actual ARM waits for fresh robot state and neutral Xbox input.
+        self.auto_arm_pending = True
+        self.auto_arm_reason = 'startup'
+        self.home_rearm_pending = False
 
         self.create_subscription(
             Joy,
@@ -170,11 +254,97 @@ class QPTeleop(Node):
             self.control_loop,
         )
 
+        self.auto_arm_timer = self.create_timer(
+            0.1,
+            self.check_auto_arm,
+        )
+
         self.get_logger().info(
             'QP teleop ready | '
-            'Share = ARM/DISARM | '
-            'RT/LT=X, right stick=Y/Z | '
-            'left stick=Rx/Ry, LB/RB=Rz'
+            'Left stick=X/Y | '
+            'RT/LT=Z | '
+            'Right stick X=Rz | '
+            'D-pad X=Rx, D-pad Y=Ry | '
+            'Share=ARM/DISARM'
+        )
+
+    def _validate_parameters(self):
+        if self.hz <= 0.0:
+            raise ValueError('control_hz must be > 0')
+
+        if self.linear_step_delta <= 0.0:
+            raise ValueError(
+                'linear_step_delta_mm must be > 0'
+            )
+
+        if self.min_linear_step <= 0.0:
+            raise ValueError(
+                'min_linear_step_mm must be > 0'
+            )
+
+        if self.max_linear_step < self.min_linear_step:
+            raise ValueError(
+                'max_linear_step_mm must be >= '
+                'min_linear_step_mm'
+            )
+
+        if not (
+            self.min_linear_step
+            <= self.linear_step
+            <= self.max_linear_step
+        ):
+            raise ValueError(
+                'linear_step_mm must be inside '
+                '[min_linear_step_mm, max_linear_step_mm]'
+            )
+
+        if self.angular_speed < 0.0:
+            raise ValueError(
+                'angular_speed_rad_s must be >= 0'
+            )
+
+        if self.joint_speed <= 0.0:
+            raise ValueError(
+                'joint_speed_deg_s must be > 0'
+            )
+
+        if self.soft_margin < 0.0:
+            raise ValueError(
+                'soft_margin_deg must be >= 0'
+            )
+
+        if not 0.0 <= self.stick_deadzone < 1.0:
+            raise ValueError(
+                'stick_deadzone must be in [0, 1)'
+            )
+
+        if not 0.0 <= self.trigger_deadzone < 1.0:
+            raise ValueError(
+                'trigger_deadzone must be in [0, 1)'
+            )
+
+        if self.stick_exponent <= 0.0:
+            raise ValueError(
+                'stick_exponent must be > 0'
+            )
+
+        if self.trigger_exponent <= 0.0:
+            raise ValueError(
+                'trigger_exponent must be > 0'
+            )
+
+    def _shape_axis(self, value):
+        return shape_axis(
+            value,
+            deadzone=self.stick_deadzone,
+            exponent=self.stick_exponent,
+        )
+
+    def _shape_trigger(self, value):
+        return shape_trigger(
+            value,
+            deadzone=self.trigger_deadzone,
+            exponent=self.trigger_exponent,
         )
 
     def joint_callback(self, msg):
@@ -208,8 +378,6 @@ class QPTeleop(Node):
         if self.arming and self.waiting_for_fresh_joint:
             self.origin_joint = self.joint_deg.copy()
             self.relative_joint.fill(0.0)
-            self.cart_filter.reset()
-
             self.last_joy_time = time.monotonic()
 
             self.waiting_for_fresh_joint = False
@@ -232,13 +400,22 @@ class QPTeleop(Node):
         a = int(msg.buttons[0])
         b = int(msg.buttons[1])
         y = int(msg.buttons[3])
+        lb = int(msg.buttons[4])
+        rb = int(msg.buttons[5])
 
-        # View acts as a safety modifier.
-        # Pressing it immediately disables active teleop.
+        # View is only a modifier for combo commands.
+        # View by itself does not change ARM state.
         if view and not getattr(self, 'last_view', 0):
-            if self.armed or self.arming:
-                self.disarm('view button')
             self.view_combo_used = False
+
+        # View + LB/RB adjusts Cartesian step.
+        # View itself does not change ARM state.
+        if view:
+            if lb and not self.last_lb:
+                self.adjust_speed(-1)
+
+            if rb and not self.last_rb:
+                self.adjust_speed(1)
 
         # System commands are triggered only while View is held.
         if view and not getattr(self, 'view_combo_used', False):
@@ -284,6 +461,50 @@ class QPTeleop(Node):
         self.last_view = view
         self.last_a = a
         self.last_b = b
+        self.last_lb = lb
+        self.last_rb = rb
+
+    def publish_status(self):
+        msg = String()
+
+        if self.armed:
+            msg.data = 'ARMED'
+        elif self.arming:
+            msg.data = 'ARMING'
+        else:
+            msg.data = 'DISARMED'
+
+        self.status_pub.publish(msg)
+
+    def publish_speed(self):
+        msg = Float64()
+        msg.data = float(self.linear_step)
+        self.speed_pub.publish(msg)
+
+    def adjust_speed(self, direction):
+        value = (
+            self.linear_step
+            + direction * self.linear_step_delta
+        )
+
+        value = max(
+            self.min_linear_step,
+            min(self.max_linear_step, value),
+        )
+
+        # Avoid floating-point values such as 3.249999999.
+        self.linear_step = round(value, 6)
+
+        speed_mm_s = self.linear_step * self.hz
+        scale = self.linear_step / self.max_linear_step
+
+        self.get_logger().warning(
+            f'TELEOP SPEED: {self.linear_step:.2f} mm/tick '
+            f'(~{speed_mm_s:.1f} mm/s, '
+            f'{scale:.0%})'
+        )
+
+        self.publish_speed()
 
     def request_gripper(self, client, label):
         if not client.service_is_ready():
@@ -320,8 +541,15 @@ class QPTeleop(Node):
             )
 
     def request_capstone_home(self):
+        # HOME must run outside TELE_OP.
+        # Rearming is scheduled again only after HOME command succeeds.
+        self.auto_arm_pending = False
+        self.home_rearm_pending = False
+
         if self.armed or self.arming:
-            self.disarm('capstone home')
+            # HOME sends its own TELE_STOP request below.
+            # Update local state only, avoiding a duplicate stop request.
+            self._set_disarmed_state('capstone home')
 
         if not self.indy_service_client.service_is_ready():
             self.get_logger().error(
@@ -382,6 +610,10 @@ class QPTeleop(Node):
                 acc_ratio=self.capstone_home_acc_ratio,
             )
 
+            self.home_rearm_pending = True
+            self.auto_arm_reason = 'CAPSTONE HOME complete'
+            self.auto_arm_pending = True
+
         except Exception as exc:
             self.get_logger().error(
                 f'CAPSTONE HOME failed: {exc}'
@@ -403,24 +635,76 @@ class QPTeleop(Node):
             )
             return
 
-        request = IndyService.Request()
-        request.data = data
+        # Recover/Zero must not race with active QP TELE_OP.
+        self.auto_arm_pending = False
+        self.home_rearm_pending = False
+
+        if self.armed or self.arming:
+            self._set_disarmed_state(
+                f'{label.lower()} command'
+            )
+
+        stop_request = IndyService.Request()
+        stop_request.data = MSG_TELE_STOP
 
         self.get_logger().warning(
-            f'Requesting {label}'
+            f'Preparing {label}: stopping TELE_OP first...'
         )
 
         self.command_future = (
-            self.indy_service_client.call_async(request)
+            self.indy_service_client.call_async(stop_request)
         )
 
         self.command_future.add_done_callback(
-            lambda future, command=label:
-                self.robot_command_done(
+            lambda future, command_data=data, command=label:
+                self.robot_command_after_stop(
                     future,
+                    command_data,
                     command,
                 )
         )
+
+    def robot_command_after_stop(self, future, data, label):
+        try:
+            response = future.result()
+
+            if not response.success:
+                self.get_logger().error(
+                    f'Could not stop TELE_OP before {label}'
+                )
+                return
+
+            motion = self.indy.get_motion_data()
+
+            if motion.get('is_in_motion', False):
+                self.get_logger().error(
+                    f'Cannot run {label}: robot still moving'
+                )
+                return
+
+            request = IndyService.Request()
+            request.data = data
+
+            self.get_logger().warning(
+                f'Requesting {label}'
+            )
+
+            self.command_future = (
+                self.indy_service_client.call_async(request)
+            )
+
+            self.command_future.add_done_callback(
+                lambda done_future, command=label:
+                    self.robot_command_done(
+                        done_future,
+                        command,
+                    )
+            )
+
+        except Exception as exc:
+            self.get_logger().error(
+                f'Could not prepare {label}: {exc}'
+            )
 
     def robot_command_done(self, future, label):
         try:
@@ -439,6 +723,123 @@ class QPTeleop(Node):
             self.get_logger().error(
                 f'{label} service failed: {exc}'
             )
+
+    def xbox_is_neutral(self):
+        joy = self.latest_joy
+
+        if joy is None:
+            return False
+
+        if len(joy.axes) < 8 or len(joy.buttons) < 12:
+            return False
+
+        # Analog sticks.
+        if abs(self._shape_axis(joy.axes[0])) > 1e-6:
+            return False
+
+        if abs(self._shape_axis(joy.axes[1])) > 1e-6:
+            return False
+
+        if abs(self._shape_axis(joy.axes[3])) > 1e-6:
+            return False
+
+        # Right-stick Y is currently unused, but still require it to
+        # be neutral before automatic ARM.
+        if abs(self._shape_axis(joy.axes[4])) > 1e-6:
+            return False
+
+        # Triggers.
+        if abs(self._shape_trigger(joy.axes[2])) > 1e-6:
+            return False
+
+        if abs(self._shape_trigger(joy.axes[5])) > 1e-6:
+            return False
+
+        # D-pad.
+        if abs(float(joy.axes[6])) > 0.5:
+            return False
+
+        if abs(float(joy.axes[7])) > 0.5:
+            return False
+
+        # No button may be held while automatic ARM happens.
+        if any(int(button) != 0 for button in joy.buttons):
+            return False
+
+        return True
+
+    def check_auto_arm(self):
+        if not self.auto_arm_pending:
+            return
+
+        if self.armed or self.arming:
+            return
+
+        now = time.monotonic()
+
+        # Require a live controller.
+        if (
+            self.latest_joy is None
+            or self.last_joy_time is None
+            or now - self.last_joy_time > 0.5
+        ):
+            return
+
+        # Require a fresh robot state.
+        if (
+            self.joint_deg is None
+            or self.last_joint_time is None
+            or now - self.last_joint_time > 0.5
+        ):
+            return
+
+        if not self.indy_service_client.service_is_ready():
+            return
+
+        # Never automatically ARM while the operator is touching
+        # a motion control or button.
+        if not self.xbox_is_neutral():
+            return
+
+        if self.home_rearm_pending:
+            try:
+                motion = self.indy.get_motion_data()
+            except Exception as exc:
+                self.get_logger().error(
+                    f'Cannot verify HOME completion: {exc}'
+                )
+                return
+
+            if motion.get('is_in_motion', False):
+                return
+
+            target = np.asarray(
+                self.capstone_home_joint_deg,
+                dtype=float,
+            )
+
+            error_deg = np.max(
+                np.abs(self.joint_deg - target)
+            )
+
+            # Do not re-enter TELE_OP until the robot has actually
+            # arrived at the requested HOME pose.
+            if error_deg > 0.5:
+                return
+
+            self.home_rearm_pending = False
+
+        reason = self.auto_arm_reason
+
+        # Consume the automatic request before entering ARM.
+        # If ARM itself fails, the operator can still use Share.
+        self.auto_arm_pending = False
+
+        self.get_logger().warning(
+            f'AUTO ARM: {reason}'
+        )
+
+        self.arm()
 
     def arm(self):
         if self.armed or self.arming:
@@ -467,9 +868,9 @@ class QPTeleop(Node):
 
         try:
             self.indy.set_teleop_params(
-                smooth_factor=0.5,
-                cutoff_freq=8.0,
-                error_gain=10.0,
+                smooth_factor=self.teleop_smooth_factor,
+                cutoff_freq=self.teleop_cutoff_freq,
+                error_gain=self.teleop_error_gain,
             )
         except Exception as exc:
             self.get_logger().error(
@@ -481,7 +882,6 @@ class QPTeleop(Node):
         self.arm_token += 1
         token = self.arm_token
 
-        self.cart_filter.reset()
         self.relative_joint.fill(0.0)
 
         request = IndyService.Request()
@@ -534,22 +934,23 @@ class QPTeleop(Node):
             'TELE_OP ready; waiting for fresh /joint_states'
         )
 
-    def disarm(self, reason):
-        if not self.armed and not self.arming:
-            return
-
+    def _set_disarmed_state(self, reason):
         # Invalidate any pending ARM callback immediately.
         self.arm_token += 1
         self.arming = False
         self.waiting_for_fresh_joint = False
         self.armed = False
-
-        self.cart_filter.reset()
         self.relative_joint.fill(0.0)
 
         self.get_logger().warning(
             f'QP TELEOP DISARMED: {reason}'
         )
+
+    def disarm(self, reason):
+        if not self.armed and not self.arming:
+            return
+
+        self._set_disarmed_state(reason)
 
         if self.indy_service_client.service_is_ready():
             request = IndyService.Request()
@@ -591,39 +992,60 @@ class QPTeleop(Node):
 
         joy = self.latest_joy
 
-        # Current Xbox mapping:
-        # LT/RT = X
-        # right stick X = Y
-        # right stick Y = Z
-        lt = shape_trigger(joy.axes[2])
-        rt = shape_trigger(joy.axes[5])
+        # Final operator mapping:
+        #
+        # Left stick:
+        #   forward/back -> Cartesian X
+        #   left/right   -> Cartesian Y
+        #
+        # RT/LT:
+        #   up/down      -> Cartesian Z
+        #
+        # Right stick:
+        #   left/right   -> Rz (yaw)
+        #
+        # D-pad:
+        #   left/right   -> Rx
+        #   up/down      -> Ry
+        #
+        # LB/RB:
+        #   reserved for View + speed adjustment
 
-        right_x = shape_axis(joy.axes[3])
-        right_y = shape_axis(joy.axes[4])
+        left_x = self._shape_axis(joy.axes[0])
+        left_y = self._shape_axis(joy.axes[1])
 
-        left_x = shape_axis(joy.axes[0])
-        left_y = shape_axis(joy.axes[1])
+        lt = self._shape_trigger(joy.axes[2])
 
-        lb = float(joy.buttons[4])
-        rb = float(joy.buttons[5])
+        right_x = self._shape_axis(joy.axes[3])
 
-        raw_translation = np.array([
-            (rt - lt) * self.linear_step,
-            right_x * self.linear_step,
-            right_y * self.linear_step,
+        rt = self._shape_trigger(joy.axes[5])
+
+        dpad_x = float(joy.axes[6])
+        dpad_y = float(joy.axes[7])
+
+        translation = np.array([
+            left_y * self.linear_step,
+            left_x * self.linear_step,
+            (lt - rt) * self.linear_step,
         ])
 
-        translation = self.cart_filter.update(
-            raw_translation
+        # Rotation scales together with translation speed.
+        speed_scale = (
+            self.linear_step / self.max_linear_step
         )
 
-        angular_step = self.angular_speed / self.hz
+        angular_step = (
+            self.angular_speed
+            * speed_scale
+            / self.hz
+        )
 
         rotation = np.array([
-            left_x * angular_step,
-            left_y * angular_step,
-            (rb - lb) * angular_step,
+            -dpad_x * angular_step,  # Rx
+            -dpad_y * angular_step,  # Ry
+            right_x * angular_step,  # Rz / yaw
         ])
+
 
         if (
             np.linalg.norm(translation) < 1e-6
@@ -643,6 +1065,9 @@ class QPTeleop(Node):
                 control_hz=self.hz,
                 soft_margin_deg=self.soft_margin,
                 max_joint_speed_deg_s=self.joint_speed,
+                orientation_weight=self.orientation_weight,
+                centering_weight=self.centering_weight,
+                damping=self.damping,
             )
 
         except Exception as exc:
@@ -669,7 +1094,7 @@ class QPTeleop(Node):
             self.disarm('joint maximum guard')
             return
 
-        # QP maximum is 45 deg/s at 30 Hz = 1.5 deg/tick.
+        # Enforce the configured maximum joint step.
         if np.max(np.abs(step)) > (
             self.joint_speed / self.hz + 1e-6
         ):
@@ -693,7 +1118,30 @@ class QPTeleop(Node):
         self.relative_joint = candidate_relative
 
     def shutdown(self):
-        self.disarm('node shutdown')
+        self.auto_arm_pending = False
+        self.home_rearm_pending = False
+
+        if self.armed or self.arming:
+            self._set_disarmed_state('node shutdown')
+        else:
+            # Invalidate an ARM callback that may still be pending.
+            self.arm_token += 1
+            self.arming = False
+            self.waiting_for_fresh_joint = False
+            self.armed = False
+            self.relative_joint.fill(0.0)
+
+        # Final synchronous stop guard.
+        # Do not rely on an async ROS service while destroying the node.
+        try:
+            self.indy.stop_teleop()
+            self.get_logger().info(
+                'TELE_OP stop confirmed for node shutdown'
+            )
+        except Exception as exc:
+            self.get_logger().error(
+                f'Final stop_teleop failed: {exc}'
+            )
 
 
 def main(args=None):

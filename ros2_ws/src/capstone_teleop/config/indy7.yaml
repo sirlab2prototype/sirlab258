@@ -1,5 +1,52 @@
 qp_teleop:
   ros__parameters:
+
+    # --------------------------------------------------------
+    # Control loop
+    # --------------------------------------------------------
+    control_hz: 30.0
+
+    # Cartesian translation per control tick [mm]
+    linear_step_mm: 5.0
+    linear_step_delta_mm: 0.25
+    min_linear_step_mm: 0.25
+    max_linear_step_mm: 5.0
+
+    # Cartesian rotation
+    angular_speed_rad_s: 0.3
+
+    # Joint safety / controller command
+    joint_speed_deg_s: 45.0
+    soft_margin_deg: 15.0
+    vel_ratio: 0.8
+    acc_ratio: 1.0
+
+    # --------------------------------------------------------
+    # QP tuning
+    # --------------------------------------------------------
+    orientation_weight: 25.0
+    centering_weight: 0.08
+    damping: 0.04
+
+    # --------------------------------------------------------
+    # Xbox input shaping
+    # --------------------------------------------------------
+    stick_deadzone: 0.18
+    stick_exponent: 2.0
+
+    trigger_deadzone: 0.08
+    trigger_exponent: 2.0
+
+    # --------------------------------------------------------
+    # Indy TELE_OP controller
+    # --------------------------------------------------------
+    teleop_smooth_factor: 0.5
+    teleop_cutoff_freq: 8.0
+    teleop_error_gain: 10.0
+
+    # --------------------------------------------------------
+    # Capstone Home
+    # --------------------------------------------------------
     capstone_home_joint_deg:
       - 0.005221
       - 40.003174
@@ -8,6 +55,5 @@ qp_teleop:
       - 0.000435
       - 90.507
 
-    # 새 capstone에서 정한 저속 Home 이동 설정
     capstone_home_vel_ratio: 18.0
     capstone_home_acc_ratio: 100.0

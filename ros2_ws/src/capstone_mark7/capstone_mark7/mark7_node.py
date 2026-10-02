@@ -15,6 +15,58 @@ DIRECTION_FORWARD = 1
 NUM_FINGERS = 6
 
 
+def steps_to_raw(steps):
+    # Mark7 protocol:
+    # raw = (steps + 21) / 2
+    #
+    # raw=0 means "ignore", so an actual position
+    # command is clamped to at least 1.
+    raw = (int(steps) + 21) // 2
+    return max(1, min(255, raw))
+
+
+def build_packet(positions, speed_raw, current_raw):
+    if len(positions) != NUM_FINGERS:
+        raise ValueError(
+            f'Expected {NUM_FINGERS} positions, '
+            f'got {len(positions)}'
+        )
+
+    speed_raw = int(speed_raw)
+    current_raw = int(current_raw)
+
+    if not 0 <= speed_raw <= 255:
+        raise ValueError(
+            f'speed_raw must be 0..255, got {speed_raw}'
+        )
+
+    if not 0 <= current_raw <= 255:
+        raise ValueError(
+            f'current_raw must be 0..255, got {current_raw}'
+        )
+
+    raw_positions = [
+        steps_to_raw(value)
+        for value in positions
+    ]
+
+    packet = bytes([
+        HAND_BOTH,
+        ALL_FINGERS,
+        speed_raw,
+        current_raw,
+        *raw_positions,
+        DIRECTION_FORWARD,
+    ])
+
+    if len(packet) != 11:
+        raise RuntimeError(
+            f'Invalid packet length: {len(packet)}'
+        )
+
+    return packet
+
+
 class Mark7Node(Node):
     def __init__(self):
         super().__init__('mark7_node')
@@ -35,13 +87,6 @@ class Mark7Node(Node):
         self.device = str(
             self.get_parameter('device').value
         )
-        self.speed_raw = int(
-            self.get_parameter('speed_raw').value
-        )
-        self.current_raw = int(
-            self.get_parameter('current_raw').value
-        )
-
         self.fd = self.open_serial(self.device)
 
         self.create_service(
@@ -116,41 +161,20 @@ class Mark7Node(Node):
         )
 
     def make_packet(self, positions):
-        if len(positions) != NUM_FINGERS:
-            raise ValueError(
-                f'Expected {NUM_FINGERS} positions, '
-                f'got {len(positions)}'
-            )
+        # Read for every command so these values remain
+        # tunable at runtime with `ros2 param set`.
+        speed_raw = self.get_parameter(
+            'speed_raw'
+        ).value
+        current_raw = self.get_parameter(
+            'current_raw'
+        ).value
 
-        raw_positions = [
-            self.steps_to_raw(value)
-            for value in positions
-        ]
-
-        # Read these parameters for every command so they can be
-        # tuned at runtime with `ros2 param set`.
-        speed_raw = int(
-            self.get_parameter('speed_raw').value
-        )
-        current_raw = int(
-            self.get_parameter('current_raw').value
-        )
-
-        packet = bytes([
-            HAND_BOTH,
-            ALL_FINGERS,
+        return build_packet(
+            positions,
             speed_raw,
             current_raw,
-            *raw_positions,
-            DIRECTION_FORWARD,
-        ])
-
-        if len(packet) != 11:
-            raise RuntimeError(
-                f'Invalid packet length: {len(packet)}'
-            )
-
-        return packet
+        )
 
     def write_packet(self, packet):
         # Existing verified implementation transmitted

@@ -1,23 +1,43 @@
-
-build/
-.DS_Store
-.idea/
-# IDE / OS
-install/
-# Local runtime / backup
-*.log
-log/
-*.pyc
+# ------------------------------------------------------------
+# Python
+# ------------------------------------------------------------
+.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-# Python
-# ROS 2
+
+# ------------------------------------------------------------
+# ROS 2 generated files
+# ------------------------------------------------------------
+build/
+install/
+log/
+
 ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
-# Runtime / temporary
-teleop_params_backup.json
-tmp/
-.venv/
+
+# ------------------------------------------------------------
+# IDE / OS
+# ------------------------------------------------------------
 .vscode/
+.idea/
+.DS_Store
+
+# ------------------------------------------------------------
+# Runtime / temporary
+# ------------------------------------------------------------
+*.log
+tmp/
+teleop_params_backup.json
+
+# ------------------------------------------------------------
+# Research data / large generated artifacts
+# ------------------------------------------------------------
+datasets/
+checkpoints/
+recordings/
+
+*.db3
+*.mcap
+rosbag2_*/

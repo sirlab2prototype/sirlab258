@@ -3,24 +3,25 @@
 <package format="3">
   <name>capstone_teleop</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Indy7 Xbox QP teleoperation and capstone launch orchestration.</description>
   <maintainer email="devcernn1348@gmail.com">sirlab2</maintainer>
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
-  <depend>geometry_msgs</depend>
+  <depend>indy_interfaces</depend>
+  <depend>std_srvs</depend>
+  <depend>std_msgs</depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>joy</exec_depend>
+  <exec_depend>indy_driver</exec_depend>
+  <exec_depend>capstone_mark7</exec_depend>
+
   <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>
   </export>
-  <depend>indy_interfaces</depend>
-
-  <depend>std_srvs</depend>
-
 </package>

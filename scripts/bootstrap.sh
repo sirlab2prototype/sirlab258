@@ -69,6 +69,20 @@ source "$VENV/bin/activate"
 
 python -m pip install -r "$ROOT/requirements.txt"
 
+if [[ -f "$ROOT/requirements-dev.txt" ]]; then
+    python -m pip install -r "$ROOT/requirements-dev.txt"
+fi
+
+if ! python - <<'PY_CHECK'
+import tkinter
+PY_CHECK
+then
+    echo "ERROR: Python tkinter is not available."
+    echo "The Xbox GUI requires tkinter."
+    echo "Install the matching system prerequisite, then rerun bootstrap."
+    exit 1
+fi
+
 echo "[3/5] Python environment ready"
 
 # --------------------------------------------------

@@ -1,0 +1,24 @@
+mark7_node:
+  ros__parameters:
+
+    # Default hardware device.
+    # grip.launch.py can override this with mark7_device:=...
+    device: /dev/ttyACM0
+
+    # Verified operating values
+    speed_raw: 50
+    current_raw: 100
+
+    # Axis order:
+    # 0 thumb flexion
+    # 1 index
+    # 2 middle
+    # 3 ring
+    # 4 little
+    # 5 thumb rotation
+
+    open_position:
+      [-10, -10, -10, -10, -10, 0]
+
+    grasp_position:
+      [0, 350, 350, 350, 350, 0]
