@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+source /opt/ros/jazzy/setup.bash
+source "$ROOT/ros2_ws/install/setup.bash"
+source "$ROOT/scripts/activate_act.sh"
+
+exec python "$ROOT/ai/record/indy7_act_record.py" "$@"

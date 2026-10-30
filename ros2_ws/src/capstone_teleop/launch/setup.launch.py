@@ -24,11 +24,12 @@ def include_launch(name, arguments):
 def generate_launch_description():
     indy_ip = LaunchConfiguration('indy_ip')
     mark7_device = LaunchConfiguration('mark7_device')
+    show_camera = LaunchConfiguration('show_camera')
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'indy_ip',
-            default_value='192.168.1.10',
+            default_value='192.168.1.114',
             description='Indy7 controller IP',
         ),
 
@@ -36,6 +37,17 @@ def generate_launch_description():
             'mark7_device',
             default_value='/dev/ttyACM0',
             description='Mark7 serial device',
+        ),
+
+        DeclareLaunchArgument(
+            'show_camera',
+            default_value='true',
+            description='Open one preview window for each RGB camera',
+        ),
+
+        include_launch(
+            'cameras.launch.py',
+            {'show_camera': show_camera},
         ),
 
         include_launch(

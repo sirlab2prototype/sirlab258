@@ -16,6 +16,8 @@ commands=(
     capg
     capx
     caps
+    omy
+    act-record
 )
 
 for command in "${commands[@]}"; do
@@ -45,3 +47,4 @@ echo "  capi  - Indy7"
 echo "  capg  - Mark7 gripper"
 echo "  capx  - Xbox + QP teleop"
 echo "  caps  - All components"
+echo "  omy   - ROBOTIS OMY environment"

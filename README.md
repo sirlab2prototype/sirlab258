@@ -25,6 +25,7 @@ Neuromeka Indy7 + Mark7 기반 캡스톤 시스템.
 - Neuromeka Indy7
 - Mand.ro Mark7
 - Xbox Controller
+- ROBOTIS OMY (official Docker-based ROS 2 Jazzy stack)
 
 Python dependencies:
 
@@ -38,6 +39,13 @@ Official Neuromeka ROS 2 driver:
 - Branch: `jazzy-indyDCP3`
 - Commit: `ca0353f077620c877c1edff2e26c8cd976773f27`
 - Git submodule로 관리
+
+Official ROBOTIS OMY driver:
+
+- Repository: `ROBOTIS-GIT/open_manipulator`
+- Branch: `jazzy`
+- Git submodule로 관리
+- 프로젝트의 기존 ROS 패키지와 의존성을 분리하기 위해 공식 Docker 환경 사용
 
 Official driver source는 capstone 기능을 위해 직접 수정하지 않는다.
 
@@ -172,11 +180,88 @@ capi    Indy7 driver
 capg    Mark7 gripper
 capx    Xbox + QP teleop + GUI
 caps    Indy7 + Mark7 + Xbox full manual setup
+omy     ROBOTIS OMY environment manager
 ```
 
 The commands are installed inside `.venv/bin`.
 
+`caps` also starts both configured RealSense RGB cameras and opens one preview
+window per camera. From the project root, the same setup can be started without
+activating the virtual environment:
+
+```bash
+./caps
+```
+
+To keep the camera topics active without opening preview windows:
+
+```bash
+./caps show_camera:=false
+```
+
+Camera topics:
+
+```text
+/camera_317222074298/camera/color/image_raw
+/camera_844212071939/camera/color/image_raw
+```
+
 No shell-global alias or `~/.bashrc` modification is required.
+
+---
+
+## ROBOTIS OMY
+
+OMY는 ROBOTIS 공식 Ubuntu 24.04 / ROS 2 Jazzy Docker 환경에서 실행한다.
+최초 설정 및 상태 확인:
+
+```bash
+git submodule update --init --recursive
+./scripts/install_commands.sh
+omy doctor
+omy start
+```
+
+컨테이너에 들어가려면:
+
+```bash
+omy enter
+```
+
+OMY 리더–팔로워 텔레옵 실행:
+
+```bash
+omy launch
+```
+
+`launch` 명령은 follower 초기 자세 이동 후 L100 리더의 중력보상과 동기화를
+시작하므로 실제 로봇이 즉시 움직인다. 작업 공간을 비우고 비상정지 버튼에 손이
+닿는 상태에서 실행한다.
+
+상태 확인 및 종료:
+
+```bash
+omy status
+omy robot-stop
+```
+
+OMY 로봇 PC를 네트워크로 사용하는 경우 로봇 PC와 사용자 PC의
+`ROS_DOMAIN_ID`를 동일하게 유지한다. `omy launch`는 OMY 로봇 PC에서 공식
+`omy_ai.launch.py`를 domain `30`, `rmw_zenoh_cpp`로 실행한다. 현재 USB 직결 주소는
+`10.42.0.101`이며 필요하면 `OMY_ROBOT_HOST` 환경 변수로 덮어쓸 수 있다.
+
+---
+
+## LeRobot ACT
+
+ACT training uses a separate environment so its PyTorch and NumPy versions do
+not interfere with the ROS environment:
+
+```bash
+source scripts/activate_act.sh
+```
+
+See [`ACT_SETUP.md`](ACT_SETUP.md) for tutorial and training commands.
 
 ---
 
@@ -189,6 +274,11 @@ Left Stick ↑↓      X
 Left Stick ←→      Y
 RT / LT            Z
 ```
+
+The left stick uses the original Pipet radial response curve, low-pass filter,
+and acceleration limiter, with axis signs adapted for the ROS `joy_node` used
+by this project. Diagonal input therefore follows the stick direction
+continuously instead of being clipped into axis-aligned steps.
 
 ## Rotation
 

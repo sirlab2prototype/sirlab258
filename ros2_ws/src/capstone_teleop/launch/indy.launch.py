@@ -26,7 +26,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'indy_ip',
-            default_value='192.168.1.10',
+            default_value='192.168.1.114',
             description='Indy7 controller IP',
         ),
         indy_driver,

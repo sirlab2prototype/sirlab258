@@ -10,7 +10,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Joy, JointState
 from indy_interfaces.srv import IndyService
 from std_srvs.srv import Trigger
-from std_msgs.msg import Float64, String
+from std_msgs.msg import Float32, Float64, String
 
 from neuromeka import IndyDCP3
 
@@ -21,6 +21,7 @@ from .qp_core import (
     shape_axis,
     shape_trigger,
 )
+from .input_profile import MotionProfile
 
 
 MSG_RECOVER = 1
@@ -33,7 +34,7 @@ class QPTeleop(Node):
     def __init__(self):
         super().__init__('qp_teleop')
 
-        self.declare_parameter('indy_ip', '192.168.1.10')
+        self.declare_parameter('indy_ip', '192.168.1.114')
         self.declare_parameter('control_hz', 30.0)
         self.declare_parameter('linear_step_mm', 5.0)
         self.declare_parameter('linear_step_delta_mm', 0.25)
@@ -55,6 +56,8 @@ class QPTeleop(Node):
         self.declare_parameter('stick_exponent', 2.0)
         self.declare_parameter('trigger_deadzone', 0.08)
         self.declare_parameter('trigger_exponent', 2.0)
+        self.declare_parameter('cartesian_accel_mm_s2', 600.0)
+        self.declare_parameter('yaw_accel_rad_s2', 1.5)
 
         # Indy TELE_OP controller tuning
         self.declare_parameter('teleop_smooth_factor', 0.5)
@@ -125,6 +128,13 @@ class QPTeleop(Node):
         )
 
         self._validate_parameters()
+        self.motion_profile = MotionProfile(
+            self.hz, self.max_linear_step, self.angular_speed,
+            self.stick_deadzone, self.stick_exponent,
+            self.trigger_deadzone, self.trigger_exponent,
+            float(self.get_parameter('cartesian_accel_mm_s2').value),
+            float(self.get_parameter('yaw_accel_rad_s2').value),
+        )
 
         self.latest_joy = None
         self.last_joy_time = None
@@ -141,6 +151,7 @@ class QPTeleop(Node):
 
         self.origin_joint = None
         self.relative_joint = np.zeros(6)
+        self.gripper_state = 0.0
 
         self.indy = IndyDCP3(self.indy_ip)
 
@@ -212,6 +223,18 @@ class QPTeleop(Node):
         self.status_pub = self.create_publisher(
             String,
             '/capstone/teleop_status',
+            10,
+        )
+
+        # Publish detached action/state copies for ACT data collection.
+        self.action_pub = self.create_publisher(
+            JointState,
+            '/capstone/teleop_action',
+            10,
+        )
+        self.gripper_state_pub = self.create_publisher(
+            Float32,
+            '/capstone/gripper_state',
             10,
         )
 
@@ -378,6 +401,7 @@ class QPTeleop(Node):
         if self.arming and self.waiting_for_fresh_joint:
             self.origin_joint = self.joint_deg.copy()
             self.relative_joint.fill(0.0)
+            self.motion_profile.reset()
             self.last_joy_time = time.monotonic()
 
             self.waiting_for_fresh_joint = False
@@ -526,6 +550,12 @@ class QPTeleop(Node):
             response = future.result()
 
             if response.success:
+                self.gripper_state = (
+                    1.0 if label.lower() == 'grasp' else 0.0
+                )
+                gripper_msg = Float32()
+                gripper_msg.data = self.gripper_state
+                self.gripper_state_pub.publish(gripper_msg)
                 self.get_logger().info(
                     f'Gripper {label}: {response.message}'
                 )
@@ -726,47 +756,10 @@ class QPTeleop(Node):
 
     def xbox_is_neutral(self):
         joy = self.latest_joy
-
-        if joy is None:
-            return False
-
-        if len(joy.axes) < 8 or len(joy.buttons) < 12:
-            return False
-
-        # Analog sticks.
-        if abs(self._shape_axis(joy.axes[0])) > 1e-6:
-            return False
-
-        if abs(self._shape_axis(joy.axes[1])) > 1e-6:
-            return False
-
-        if abs(self._shape_axis(joy.axes[3])) > 1e-6:
-            return False
-
-        # Right-stick Y is currently unused, but still require it to
-        # be neutral before automatic ARM.
-        if abs(self._shape_axis(joy.axes[4])) > 1e-6:
-            return False
-
-        # Triggers.
-        if abs(self._shape_trigger(joy.axes[2])) > 1e-6:
-            return False
-
-        if abs(self._shape_trigger(joy.axes[5])) > 1e-6:
-            return False
-
-        # D-pad.
-        if abs(float(joy.axes[6])) > 0.5:
-            return False
-
-        if abs(float(joy.axes[7])) > 0.5:
-            return False
-
-        # No button may be held while automatic ARM happens.
-        if any(int(button) != 0 for button in joy.buttons):
-            return False
-
-        return True
+        return (
+            joy is not None
+            and self.motion_profile.neutral(joy.axes, joy.buttons)
+        )
 
     def check_auto_arm(self):
         if not self.auto_arm_pending:
@@ -883,6 +876,7 @@ class QPTeleop(Node):
         token = self.arm_token
 
         self.relative_joint.fill(0.0)
+        self.motion_profile.reset()
 
         request = IndyService.Request()
         request.data = MSG_TELE_JOINT_RLT
@@ -941,6 +935,7 @@ class QPTeleop(Node):
         self.waiting_for_fresh_joint = False
         self.armed = False
         self.relative_joint.fill(0.0)
+        self.motion_profile.reset()
 
         self.get_logger().warning(
             f'QP TELEOP DISARMED: {reason}'
@@ -1011,41 +1006,16 @@ class QPTeleop(Node):
         # LB/RB:
         #   reserved for View + speed adjustment
 
-        left_x = self._shape_axis(joy.axes[0])
-        left_y = self._shape_axis(joy.axes[1])
-
-        lt = self._shape_trigger(joy.axes[2])
-
-        right_x = self._shape_axis(joy.axes[3])
-
-        rt = self._shape_trigger(joy.axes[5])
-
-        dpad_x = float(joy.axes[6])
-        dpad_y = float(joy.axes[7])
-
-        translation = np.array([
-            left_y * self.linear_step,
-            left_x * self.linear_step,
-            (lt - rt) * self.linear_step,
-        ])
-
-        # Rotation scales together with translation speed.
-        speed_scale = (
-            self.linear_step / self.max_linear_step
-        )
-
-        angular_step = (
-            self.angular_speed
-            * speed_scale
-            / self.hz
-        )
-
-        rotation = np.array([
-            -dpad_x * angular_step,  # Rx
-            -dpad_y * angular_step,  # Ry
-            right_x * angular_step,  # Rz / yaw
-        ])
-
+        try:
+            translation, rotation = self.motion_profile.update(
+                joy.axes, self.linear_step
+            )
+        except ValueError as exc:
+            self.get_logger().error(
+                f"Invalid Xbox input: {exc}"
+            )
+            self.disarm("invalid Xbox input")
+            return
 
         if (
             np.linalg.norm(translation) < 1e-6
@@ -1117,6 +1087,14 @@ class QPTeleop(Node):
 
         self.relative_joint = candidate_relative
 
+        action_msg = JointState()
+        action_msg.header.stamp = self.get_clock().now().to_msg()
+        action_msg.name = [
+            'joint0', 'joint1', 'joint2', 'joint3', 'joint4', 'joint5',
+        ]
+        action_msg.position = np.radians(candidate_joint).tolist()
+        self.action_pub.publish(action_msg)
+
     def shutdown(self):
         self.auto_arm_pending = False
         self.home_rearm_pending = False
@@ -1130,6 +1108,7 @@ class QPTeleop(Node):
             self.waiting_for_fresh_joint = False
             self.armed = False
             self.relative_joint.fill(0.0)
+            self.motion_profile.reset()
 
         # Final synchronous stop guard.
         # Do not rely on an async ROS service while destroying the node.

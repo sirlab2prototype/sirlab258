@@ -2,9 +2,11 @@
 # Python
 # ------------------------------------------------------------
 .venv/
+.venv-act/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.hf_cache/
 
 # ------------------------------------------------------------
 # ROS 2 generated files
@@ -37,7 +39,11 @@ teleop_params_backup.json
 datasets/
 checkpoints/
 recordings/
+outputs/
 
 *.db3
 *.mcap
 rosbag2_*/
+
+# Generated hardware diagnostics
+docs/diagnostics/*.jsonl

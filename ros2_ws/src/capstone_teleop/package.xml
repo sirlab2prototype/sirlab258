@@ -18,6 +18,8 @@
   <exec_depend>joy</exec_depend>
   <exec_depend>indy_driver</exec_depend>
   <exec_depend>capstone_mark7</exec_depend>
+  <exec_depend>image_tools</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

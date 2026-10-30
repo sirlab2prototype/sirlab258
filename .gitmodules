@@ -2,3 +2,7 @@
 	path = ros2_ws/src/external/indy-ros2
 	url = https://github.com/neuromeka-robotics/indy-ros2.git
 	branch = jazzy-indyDCP3
+[submodule "external/open_manipulator"]
+	path = external/open_manipulator
+	url = https://github.com/ROBOTIS-GIT/open_manipulator.git
+	branch = jazzy

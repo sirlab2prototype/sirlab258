@@ -37,6 +37,10 @@ qp_teleop:
     trigger_deadzone: 0.08
     trigger_exponent: 2.0
 
+    # Command acceleration while input is held.
+    cartesian_accel_mm_s2: 600.0
+    yaw_accel_rad_s2: 1.5
+
     # --------------------------------------------------------
     # Indy TELE_OP controller
     # --------------------------------------------------------
