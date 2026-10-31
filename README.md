@@ -2,6 +2,8 @@
 
 Neuromeka Indy7 + Mark7 기반 캡스톤 시스템.
 
+운영 문서: [Recorder·Core-108 수집](ai/record/COLLECTION.md) · [ACT 환경](ACT_SETUP.md) · [108개 수집 계획](docs/ACT_Data_Collection_Plan.md)
+
 기존 시스템의 필요한 기능과 동작만 참고하고,
 현재 캡스톤에 필요한 기능을 단순하고 설명 가능한 구조로 새로 구현한다.
 

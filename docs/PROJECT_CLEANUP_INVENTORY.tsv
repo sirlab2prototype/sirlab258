@@ -1,0 +1,204 @@
+path	class	role	reference_evidence	decision
+.gitignore	C	캐시·연구 데이터 제외 규칙	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+.gitmodules	C	공식 외부 저장소 경계	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ACT_SETUP.md	B	분리 가상환경·ACT 설치·카메라 재구축	README.md; docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md	중복·오래된 안내만 정리; 실행 설정·동작 유지
+README.md	B	프로젝트 입구·운영 문서 링크	docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md	중복·오래된 안내만 정리; 실행 설정·동작 유지
+act	D	외부 호출 가능한 Bash·CLI·설치·진단 진입점	README.md; ai/train/TRAINING.md; ai/serve/INFERENCE.md; ai/execute/EXECUTION.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+act-record	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	README.md; ai/record/COLLECTION.md; ai/record/START_REFERENCE.md; ai/record/test/test_collection.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+act-train	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	act; ai/train/TRAINING.md; ai/train/configs/README.md; docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/checkpoint_identity.py	D	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	ai/evaluate/EVALUATION.md; ai/evaluate/sources.py; ai/evaluate/test/test_evaluation.py; ai/serve/zmq_act_server.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/dataset_contract.py	C	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	ai/execute/ros_adapters.py; ai/execute/test/test_execution.py; ai/execute/test/test_task_executor.py; ai/record/collection.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/evaluate/EVALUATION.md	D	평가·이력·보고 모듈 또는 운영 문서	README.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/analysis.py	D	평가·이력·보고 모듈 또는 운영 문서	ai/evaluate/EVALUATION.md; ai/evaluate/main.py; ai/evaluate/test/test_evaluation.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/conditions.json	D	장비·안전·실험 설정 또는 보류 템플릿	ai/evaluate/EVALUATION.md; ai/evaluate/main.py; ai/evaluate/test/test_evaluation.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/main.py	D	평가·이력·보고 모듈 또는 운영 문서	README.md; act; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/records.py	D	평가·이력·보고 모듈 또는 운영 문서	README.md; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py; ai/evaluate/main.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/reliability.py	D	평가·이력·보고 모듈 또는 운영 문서	ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py; ai/evaluate/report.py; ai/evaluate/sources.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/report.py	D	평가·이력·보고 모듈 또는 운영 문서	README.md; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py; ai/evaluate/main.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/sources.py	D	평가·이력·보고 모듈 또는 운영 문서	ai/evaluate/analysis.py; ai/evaluate/main.py; ai/evaluate/reliability.py; ai/evaluate/report.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/evaluate/test/test_evaluation.py	D	기존 오프라인 회귀 테스트·합성 fixture	ai/evaluate/EVALUATION.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/EXECUTION.md	D	실행·Task·Mock·안전 계층 또는 운영 문서	README.md; ai/train/TRAINING.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/TASK_EXECUTOR.md	D	실행·Task·Mock·안전 계층 또는 운영 문서	README.md; ai/execute/EXECUTION.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/adapters.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/TASK_EXECUTOR.md; ai/execute/controller.py; ai/execute/mock_session.py; ai/execute/test/test_execution.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/authority.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/evaluate/reliability.py; ai/execute/EXECUTION.md; ai/execute/TASK_EXECUTOR.md; ai/execute/home.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/config/indy7_review_required.json	D	장비·안전·실험 설정 또는 보류 템플릿	ai/execute/EXECUTION.md; docs/ACT_OFFLINE_READINESS.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/config/mock.json	D	장비·안전·실험 설정 또는 보류 템플릿	ai/execute/EXECUTION.md; ai/execute/main.py; ai/execute/task_main.py; ai/execute/test/test_execution.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/config/task1.json	D	장비·안전·실험 설정 또는 보류 템플릿	ai/execute/TASK_EXECUTOR.md; ai/execute/task_main.py; ai/execute/test/test_task_executor.py; ai/test/test_offline_end_to_end.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/controller.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	README.md; ai/evaluate/analysis.py; ai/evaluate/records.py; ai/evaluate/reliability.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/gripper.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	README.md; ai/dataset_contract.py; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/home.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ACT_SETUP.md; README.md; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/main.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	README.md; act; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/mock_client.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/EXECUTION.md; ai/serve/infer.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/mock_session.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/main.py; ai/execute/mock_client.py; ai/execute/task_session.py; ai/execute/test/test_execution.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/ros_adapters.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/test/test_execution.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/safety.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py; ai/evaluate/records.py; ai/evaluate/reliability.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/task_config.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/mock_client.py; ai/execute/task_executor.py; ai/execute/task_main.py; ai/execute/task_session.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/task_executor.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/task_session.py; ai/execute/test/test_task_executor.py; ai/test/test_offline_end_to_end.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/task_main.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	act; ai/serve/test/test_ros_recovery.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/task_session.py	D	실행·Task·Mock·안전 계층 또는 운영 문서	ai/execute/mock_client.py; ai/execute/test/test_task_executor.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/test/test_execution.py	D	기존 오프라인 회귀 테스트·합성 fixture	ai/execute/test/test_task_executor.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/execute/test/test_task_executor.py	D	기존 오프라인 회귀 테스트·합성 fixture	ai/test/test_offline_end_to_end.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/observation_timing.py	C	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	ai/evaluate/analysis.py; ai/evaluate/records.py; ai/evaluate/reliability.py; ai/execute/test/test_execution.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/COLLECTION.md	C	수집 조작·좌표·교정 마커·장부·reconcile 기준	ACT_SETUP.md; README.md; ai/record/START_REFERENCE.md; ai/record/indy7_act_record.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/START_REFERENCE.md	B	60ms 시작 기준의 원인·시각 계약·검증 한계	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	중복·오래된 안내만 정리; 실행 설정·동작 유지
+ai/record/collection.py	C	Recorder·Collection 구현 또는 성능 재현 도구	ACT_SETUP.md; README.md; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/correction_marker.py	C	Recorder·Collection 구현 또는 성능 재현 도구	ai/record/collection.py; ai/record/indy7_act_record.py; ai/record/test/test_recorder_ui_correction.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/indy7_act_record.py	C	Recorder·Collection 구현 또는 성능 재현 도구	ai/record/COLLECTION.md; ai/record/test/benchmark_bounded_history.py; ai/record/test/test_collection.py; ai/record/test/test_indy7_act_record.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/terminal_ui.py	C	Recorder·Collection 구현 또는 성능 재현 도구	ai/record/collection.py; ai/record/indy7_act_record.py; ai/record/test/test_recorder_ui_correction.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/test/benchmark_bounded_history.py	C	기존 오프라인 회귀 테스트·합성 fixture	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/test/test_collection.py	C	기존 오프라인 회귀 테스트·합성 fixture	ai/record/COLLECTION.md; ai/record/test/test_recorder_ui_correction.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/test/test_indy7_act_record.py	C	기존 오프라인 회귀 테스트·합성 fixture	ai/record/COLLECTION.md; ai/record/test/test_collection.py; ai/record/test/test_pending_start.py; ai/record/test/test_recorder_ui_correction.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/test/test_pending_start.py	C	기존 오프라인 회귀 테스트·합성 fixture	ai/record/COLLECTION.md; ai/record/test/test_recorder_ui_correction.py; docs/MARK7_STATE_FEEDBACK_INVESTIGATION.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/record/test/test_recorder_ui_correction.py	C	기존 오프라인 회귀 테스트·합성 fixture	ai/record/COLLECTION.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/serve/INFERENCE.md	D	추론·RPC·관측·복구 모듈 또는 운영 문서	README.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/__init__.py	C	Python 패키지 식별·공개 import 경로	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/serve/action_scheduler.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/serve/dry_run.py; ai/serve/test/test_inference.py; ai/serve/test/test_ros_recovery.py; ai/test/test_offline_end_to_end.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/dry_run.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/execute/EXECUTION.md; ai/execute/mock_client.py; ai/serve/INFERENCE.md; ai/serve/action_scheduler.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/infer.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	README.md; act; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/legacy_rgb_protocol.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/serve/select_act_pool_model.py; ai/serve/zmq_act_pool_server.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/lerobot_act_backend.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/execute/test/test_execution.py; ai/serve/rgb_act_backend.py; ai/test/test_offline_end_to_end.py; ai/train/TRAINING.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/observation_diagnostics.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/serve/observations.py; ai/serve/test/test_ros_readiness.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/observations.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ACT_SETUP.md; ai/evaluate/reliability.py; ai/execute/EXECUTION.md; ai/execute/TASK_EXECUTOR.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/protocol.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	README.md; ai/evaluate/EVALUATION.md; ai/evaluate/analysis.py; ai/evaluate/main.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/rgb_act_backend.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/serve/zmq_act_pool_server.py; ai/serve/zmq_act_server.py; docs/PROJECT_CONTEXT.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/ros_recovery.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/serve/dry_run.py; ai/serve/infer.py; ai/serve/test/test_ros_recovery.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/rpc.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/evaluate/reliability.py; ai/serve/INFERENCE.md; ai/serve/dry_run.py; ai/serve/infer.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/select_act_pool_model.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/test/test_inference.py	D	기존 오프라인 회귀 테스트·합성 fixture	ai/execute/test/test_execution.py; ai/serve/test/test_operator_gripper.py; ai/serve/test/test_ros_readiness.py; ai/serve/test/test_ros_recovery.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/test/test_operator_gripper.py	D	기존 오프라인 회귀 테스트·합성 fixture	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/test/test_ros_readiness.py	D	기존 오프라인 회귀 테스트·합성 fixture	docs/ACT_ROS_STAGE1.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/test/test_ros_recovery.py	D	기존 오프라인 회귀 테스트·합성 fixture	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/zmq_act_pool_server.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/zmq_act_server.py	D	추론·RPC·관측·복구 모듈 또는 운영 문서	ai/evaluate/test/test_evaluation.py; ai/serve/INFERENCE.md; ai/serve/infer.py; ai/serve/test/test_inference.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/test/test_offline_end_to_end.py	D	기존 오프라인 회귀 테스트·합성 fixture	README.md; docs/ACT_OFFLINE_READINESS.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/TRAINING.md	D	학습·검증·checkpoint 모듈 또는 운영 문서	README.md; ai/train/VALIDATION.md; ai/train/configs/README.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/VALIDATION.md	D	학습·검증·checkpoint 모듈 또는 운영 문서	ai/train/TRAINING.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/__init__.py	C	Python 패키지 식별·공개 import 경로	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ai/train/checkpoint.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	.gitignore; README.md; ai/checkpoint_identity.py; ai/evaluate/EVALUATION.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/README.md	B	과거 YAML의 역할·현행 설정과 차이	README.md; docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md	중복·오래된 안내만 정리; 실행 설정·동작 유지
+ai/train/configs/act_a_s0.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_a_s1.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_a_s2.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_b_s0.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_b_s1.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_b_s2.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_c_s0.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_c_s1.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_c_s2.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_d_s0.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_d_s1.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/configs/act_d_s2.yaml	D	장비·안전·실험 설정 또는 보류 템플릿	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/evaluate_overfit.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	ai/evaluate/EVALUATION.md; ai/train/run_train.py; docs/PROJECT_CONTEXT.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/lerobot_entry.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	ai/train/TRAINING.md; ai/train/run_train.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/pipeline_utils.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	ai/test/test_offline_end_to_end.py; ai/train/evaluate_overfit.py; ai/train/run_train.py; ai/train/test/test_training_pipeline.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/processor_contract.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	ai/serve/lerobot_act_backend.py; ai/train/checkpoint.py; ai/train/lerobot_entry.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/run_train.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	act-train; ai/execute/test/test_execution.py; ai/execute/test/test_task_executor.py; ai/serve/test/test_inference.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/test/test_training_pipeline.py	D	기존 오프라인 회귀 테스트·합성 fixture	ai/execute/test/test_execution.py; ai/execute/test/test_task_executor.py; ai/serve/test/test_inference.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/test/test_validate_dataset.py	D	기존 오프라인 회귀 테스트·합성 fixture	ai/execute/test/test_task_executor.py; ai/serve/test/test_inference.py; ai/train/VALIDATION.md; ai/train/test/test_training_pipeline.py	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/train/validate_dataset.py	D	학습·검증·checkpoint 모듈 또는 운영 문서	act; ai/execute/test/test_task_executor.py; ai/serve/test/test_inference.py; ai/train/VALIDATION.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+caps	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	README.md; ACT_SETUP.md; scripts/install_commands.sh; scripts/bin/caps	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/ACT_108_Episode_Execution_Log_Template.md	C	원본 108개 Condition ID·고정 Shuffle 순서	ai/record/COLLECTION.md; ai/record/collection.py; docs/PROJECT_CONTEXT.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/ACT_Data_Collection_Plan.md	C	실험 설계·성공 단계·workspace 제약	README.md; ai/evaluate/EVALUATION.md; ai/evaluate/conditions.json; docs/PROJECT_CONTEXT.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/ACT_OFFLINE_READINESS.md	D	장애·실행·검증 근거 문서	README.md; docs/ACT_ROS_STAGE1.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+docs/ACT_ROS_RECOVERY.md	D	장애·실행·검증 근거 문서	README.md; ai/serve/INFERENCE.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+docs/ACT_ROS_STAGE1.md	D	장애·실행·검증 근거 문서	README.md; ai/serve/INFERENCE.md; docs/MARK7_STATE_FEEDBACK_INVESTIGATION.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+docs/INDY7_J6_FAULT_HANDOFF.md	C	J6 장애 근거·제조사 복구 인계	docs/PROJECT_CONTEXT.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/MARK7_STATE_FEEDBACK_INVESTIGATION.md	D	장애·실행·검증 근거 문서	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+docs/PROJECT_CONTEXT.md	B	프로젝트 상태와 날짜별 진단 기록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	중복·오래된 안내만 정리; 실행 설정·동작 유지
+docs/diagnostics/indy_j6_fault_detail_20261012_203736.jsonl	C	장애·실행·검증 근거 문서	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/diagnostics/indy_j6_observe_20261012_202951.jsonl	C	장애·실행·검증 근거 문서	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/diagnostics/indy_j6_observe_20261012_203543.jsonl	C	장애·실행·검증 근거 문서	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+docs/diagnostics/indy_j6_rx_tx_20261012_203941.jsonl	C	장애·실행·검증 근거 문서	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+pytest.ini	C	기본 오프라인 ROS 패키지 테스트 경로	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+requirements-dev.txt	C	개발·테스트 의존성	scripts/bootstrap.sh	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+requirements.txt	C	로봇 Python 의존성 pin	README.md; docs/PROJECT_CONTEXT.md; scripts/bootstrap.sh	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/capstone_mark7/__init__.py	C	Python 패키지 식별·공개 import 경로	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/capstone_mark7/mark7_node.py	C	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	docs/ACT_ROS_STAGE1.md; docs/MARK7_STATE_FEEDBACK_INVESTIGATION.md; ros2_ws/src/capstone_mark7/config/mark7.yaml; ros2_ws/src/capstone_mark7/setup.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/config/mark7.yaml	C	장비·안전·실험 설정 또는 보류 템플릿	README.md; docs/PROJECT_CONTEXT.md; ros2_ws/src/capstone_teleop/launch/grip.launch.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/package.xml	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/resource/capstone_mark7	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/setup.cfg	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/setup.py	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_mark7/test/test_mark7_protocol.py	C	기존 오프라인 회귀 테스트·합성 fixture	docs/MARK7_STATE_FEEDBACK_INVESTIGATION.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/capstone_teleop/__init__.py	C	Python 패키지 식별·공개 import 경로	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/capstone_teleop/input_profile.py	C	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md; ros2_ws/src/capstone_teleop/capstone_teleop/qp_teleop.py; ros2_ws/src/capstone_teleop/test/test_input_profile.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/capstone_teleop/qp_core.py	C	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	ai/execute/EXECUTION.md; docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md; ros2_ws/src/capstone_teleop/capstone_teleop/input_profile.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/capstone_teleop/qp_teleop.py	D	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	ai/execute/ros_adapters.py; ai/execute/task_config.py; ai/execute/test/test_execution.py; docs/INDY7_J6_FAULT_HANDOFF.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ros2_ws/src/capstone_teleop/capstone_teleop/teleop_gui.py	C	공유 데이터 계약·관측 시간 정합성 또는 ROS 구현	ros2_ws/src/capstone_teleop/launch/xbox.launch.py; ros2_ws/src/capstone_teleop/setup.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/config/camera_rgb_only.yaml	C	장비·안전·실험 설정 또는 보류 템플릿	docs/PROJECT_CONTEXT.md; ros2_ws/src/capstone_teleop/launch/cameras.launch.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/config/indy7.yaml	C	장비·안전·실험 설정 또는 보류 템플릿	README.md; ai/execute/EXECUTION.md; ai/execute/TASK_EXECUTOR.md; ai/execute/config/task1.json	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/config/rgb_cameras.yaml	C	장비·안전·실험 설정 또는 보류 템플릿	docs/PROJECT_CONTEXT.md; ros2_ws/src/capstone_teleop/launch/cameras.launch.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/launch/cameras.launch.py	C	ROS 2 외부 실행 진입점·노드 조합	docs/INDY7_J6_FAULT_HANDOFF.md; ros2_ws/src/capstone_teleop/launch/setup.launch.py	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/launch/grip.launch.py	C	ROS 2 외부 실행 진입점·노드 조합	README.md; ros2_ws/src/capstone_mark7/config/mark7.yaml; ros2_ws/src/capstone_teleop/launch/setup.launch.py; scripts/bin/capg	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/launch/indy.launch.py	C	ROS 2 외부 실행 진입점·노드 조합	docs/ACT_ROS_STAGE1.md; docs/PROJECT_CONTEXT.md; ros2_ws/src/capstone_teleop/launch/setup.launch.py; scripts/bin/capi	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/launch/setup.launch.py	C	ROS 2 외부 실행 진입점·노드 조합	docs/ACT_ROS_STAGE1.md; docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md; scripts/bin/caps	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/launch/xbox.launch.py	C	ROS 2 외부 실행 진입점·노드 조합	docs/ACT_ROS_STAGE1.md; ros2_ws/src/capstone_teleop/launch/setup.launch.py; scripts/bin/capx	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/package.xml	C	ROS 패키지 발견·설치·console_scripts 등록	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/resource/capstone_teleop	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/setup.cfg	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/setup.py	C	ROS 패키지 발견·설치·console_scripts 등록	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/test/test_input_profile.py	C	기존 오프라인 회귀 테스트·합성 fixture	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+ros2_ws/src/capstone_teleop/test/test_qp_core.py	C	기존 오프라인 회귀 테스트·합성 fixture	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/activate_act.sh	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	ACT_SETUP.md; docs/INDY7_J6_FAULT_HANDOFF.md; scripts/bin/act-record	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bin/act-record	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	act-record; docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bin/capg	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bin/capi	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bin/caps	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	caps; docs/PROJECT_CONTEXT.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bin/capx	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	직접 텍스트 참조 미검출; 외부 호출/설정/동적 로딩 배제 불가	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bin/omy	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	docs/INDY7_J6_FAULT_HANDOFF.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/bootstrap.sh	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	README.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/diagnose_indy7_j6_readonly.py	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	docs/INDY7_J6_FAULT_HANDOFF.md; docs/PROJECT_CONTEXT.md	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/install_commands.sh	C	외부 호출 가능한 Bash·CLI·설치·진단 진입점	README.md; docs/INDY7_J6_FAULT_HANDOFF.md; scripts/bootstrap.sh	실행·테스트·재현·복구에 필요; 삭제 근거 없음
+scripts/rotate_ros_image.py	D	과거 wrist 토픽 영상 회전 도구	docs/INDY7_J6_FAULT_HANDOFF.md	별도 미커밋 작업 또는 과거 실험/외부 호출 여부 미확인; 보존
+ai/serve/__pycache__/ros_recovery.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/serve/ros_recovery.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/serve/__pycache__/__init__.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/serve/__init__.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/serve/__pycache__/infer.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/serve/infer.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/train/__pycache__/__init__.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/train/__init__.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/train/__pycache__/run_train.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/train/run_train.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/__pycache__/observation_timing.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/observation_timing.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/__pycache__/dataset_contract.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/dataset_contract.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_recorder_ui_correction.cpython-312-pytest-9.1.1.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_recorder_ui_correction.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_pending_start.cpython-312-pytest-9.1.1.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_pending_start.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_pending_start.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_pending_start.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_indy7_act_record.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_indy7_act_record.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_recorder_ui_correction.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_recorder_ui_correction.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_indy7_act_record.cpython-312-pytest-9.1.1.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_indy7_act_record.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_collection.cpython-312-pytest-9.1.1.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_collection.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/test_collection.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/test_collection.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/test/__pycache__/benchmark_bounded_history.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/test/benchmark_bounded_history.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/__pycache__/terminal_ui.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/terminal_ui.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/__pycache__/correction_marker.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/correction_marker.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/__pycache__/collection.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/collection.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/record/__pycache__/indy7_act_record.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/record/indy7_act_record.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/evaluate/__pycache__/reliability.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/evaluate/reliability.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/evaluate/__pycache__/records.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/evaluate/records.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/execute/__pycache__/task_main.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/execute/task_main.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/execute/__pycache__/task_config.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/execute/task_config.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ai/execute/__pycache__/safety.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ai/execute/safety.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/test/__pycache__/test_input_profile.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/test/test_input_profile.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/test/__pycache__/test_qp_core.cpython-312-pytest-8.4.2.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/test/test_qp_core.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/test/__pycache__/test_qp_core.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/test/test_qp_core.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/test/__pycache__/test_input_profile.cpython-312-pytest-7.4.4.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/test/test_input_profile.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/test/__pycache__/test_qp_core.cpython-312-pytest-7.4.4.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/test/test_qp_core.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/capstone_teleop/__pycache__/__init__.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/capstone_teleop/__init__.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/capstone_teleop/__pycache__/teleop_gui.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/capstone_teleop/teleop_gui.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/capstone_teleop/__pycache__/qp_core.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/capstone_teleop/qp_core.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/capstone_teleop/__pycache__/input_profile.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/capstone_teleop/input_profile.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/capstone_teleop/__pycache__/qp_teleop.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/capstone_teleop/qp_teleop.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/launch/__pycache__/xbox.launch.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/launch/xbox.launch.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/launch/__pycache__/grip.launch.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/launch/grip.launch.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/launch/__pycache__/indy.launch.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/launch/indy.launch.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/launch/__pycache__/cameras.launch.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/launch/cameras.launch.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_teleop/launch/__pycache__/setup.launch.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_teleop/launch/setup.launch.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_mark7/test/__pycache__/test_mark7_protocol.cpython-312-pytest-8.4.2.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_mark7/test/test_mark7_protocol.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_mark7/test/__pycache__/test_mark7_protocol.cpython-312-pytest-7.4.4.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_mark7/test/test_mark7_protocol.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_mark7/capstone_mark7/__pycache__/__init__.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_mark7/capstone_mark7/__init__.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+ros2_ws/src/capstone_mark7/capstone_mark7/__pycache__/mark7_node.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	ros2_ws/src/capstone_mark7/capstone_mark7/mark7_node.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+scripts/__pycache__/diagnose_indy7_j6_readonly.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	scripts/diagnose_indy7_j6_readonly.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+scripts/__pycache__/rotate_ros_image.cpython-312.pyc	A	Python bytecode 또는 pytest 캐시	scripts/rotate_ros_image.py	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+.pytest_cache/CACHEDIR.TAG	A	Python bytecode 또는 pytest 캐시	pytest 자동 생성	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+.pytest_cache/.gitignore	A	Python bytecode 또는 pytest 캐시	pytest 자동 생성	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+.pytest_cache/README.md	A	Python bytecode 또는 pytest 캐시	pytest 자동 생성	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+.pytest_cache/v/cache/nodeids	A	Python bytecode 또는 pytest 캐시	pytest 자동 생성	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+.pytest_cache/v/cache/stepwise	A	Python bytecode 또는 pytest 캐시	pytest 자동 생성	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능
+.pytest_cache/v/cache/lastfailed	A	Python bytecode 또는 pytest 캐시	pytest 자동 생성	Git ignored 확인; 원본 소스 존재 또는 pytest 캐시 표준 파일; 재생성 가능

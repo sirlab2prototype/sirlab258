@@ -62,48 +62,15 @@ port/cable if available.
 
 ## Record Indy7 ACT demonstrations
 
-Build the ROS workspace after changing the Indy teleoperation node so it
-publishes commanded joint targets on `/capstone/teleop_action`. Start the full
-robot stack in one terminal with `./caps`, then run `./act-record` in another.
-The recorder samples `/joint_states`, both configured RGB topics, and the
-teleoperation target at 20 FPS into `datasets/indy7_act`. State/action vectors
-contain six Indy joints plus a binary gripper value (open `0`, grasp `1`).
-Before the first episode, use the Xbox gripper-open button once and wait for
-the recorder's readiness check; the gripper state topic must be observed
-before `start` is accepted.
+Recorder의 실행·키 조작·선택적 좌표 입력·Core-108 진행 관리·저장 복구는
+[Recorder / Core-108 운영 가이드](ai/record/COLLECTION.md)를 기준으로 한다.
+정식 수집과 Pilot의 경로를 분리하고, 기존 Dataset을 재개할 때는 가이드의
+동일 repo id 및 `--resume` 규칙을 따른다.
 
-The recorder prints the following controls at startup:
+장비 실행은 환경 설치와 별도다. `./caps`는 실제 장비를 시작하며 QP 자동 ARM
+경로가 있다. 실물 사전 검증 없이 실행하지 않는다. Home 복귀 전에는 `r`로
+녹화를 종료한다. 미확인 Gripper 상태를 임의 값으로 채우지 않는다.
 
-```text
-[Recorder Controls]
-s : start
-a : save
-r : retry
-d : discard
-q : quit
-```
-
-In the recorder terminal, press `s` at the start of an episode, `a` to commit
-it, `d` to drop the current unsaved take, `r` to discard and immediately record
-the replacement, or `q` to exit. The original full commands `start`, `save`,
-`discard`, `retry`, and `quit` remain supported. `Ctrl+C` also exits and
-discards only the unsaved take. A saved episode is not erased by `d`/`discard`;
-preserve the master execution log in `docs/ACT_108_Episode_Execution_Log_Template.md`
-for target/actual basket coordinates, yaw, and outcome.
-
-To delete a previously saved bad episode, stop the recorder first. Episode
-indices are zero-based; for example, remove episode 3 (the fourth episode) with
-this LeRobot edit command, which creates an in-place backup:
-
-```bash
-source scripts/activate_act.sh
-lerobot-edit-dataset \
-  --repo_id local/indy7_act \
-  --root datasets/indy7_act \
-  --operation.type delete_episodes \
-  --operation.episode_indices "[3]"
-```
-
-Use `--root datasets/indy7_pilot` for a separate pilot. To append to an existing
-dataset, pass both its original repo id and `--resume`; the root must contain a
-LeRobot `meta/info.json`.
+저장된 Dataset·Timing Sidecar·Episode Index·장부·receipt는 함께 보존한다.
+일반 Dataset 편집기로 일부만 수정하거나 삭제하지 않는다. 오류가 있으면
+운영 가이드의 Pending 보존·reconcile 절차를 따른다.

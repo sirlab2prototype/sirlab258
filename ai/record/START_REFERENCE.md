@@ -1,8 +1,9 @@
 # Recorder: s 처리 시각을 고정한 수신 대기
 
 `./act-record`의 `s`는 메인 루프가 명령을 처리한 순간의 paired monotonic/Unix/ROS
-clock을 `t0`로 저장한다. 키보드 읽기 thread는 문자열만 Queue에 넣는다. 물리 키 입력
-순간이나 stdin thread가 읽은 시각이 아니라 **메인 루프의 처리 시각**이다.
+clock을 `t0`로 저장한다. 입력 thread는 명령 문자열과 수신 시각을 Queue에 넣지만,
+`s`의 시작 기준은 **메인 루프의 처리 시각**이다. `x` 교정 마커는 별도로 입력 수신
+시각을 사용한다. 조작·마커·복구 기준은 [운영 가이드](COLLECTION.md)를 따른다.
 
 ## 이전 오류의 발생 경로
 
@@ -61,8 +62,8 @@ polling 지연은 기존 기록 방식처럼 허용하되 t0는 옮기지 않는
 ## 유지한 조건
 
 - Camera age50ms, Camera skew40ms, State/전체 observation75ms 그대로
-- RECORDING의 IntegrityError → INVALID/REVIEW, 성공·실패 Dataset 양쪽 저장 차단
-- 기존 성공/실패/Pending 디렉터리,7D/RGB2개/20FPS feature와 Timing Sidecar 그대로
+- RECORDING의 IntegrityError → INVALID/REVIEW, Success/Correction 저장 차단
+- Success/Correction/Pending 및 과거 Failure 보존, 7D/RGB2개/20FPS feature와 Timing Sidecar 유지
 - 프레임 보간·복제·건너뛰기·압축 없음. 최초 slot 지연도 기존 Fail-fast로 처리
 - Driver/Xbox/Mark7 및 ACT ROS Dry Run Recovery 변경 없음
 - r/d는 시작 대기를 취소하고 READY, q/EOF/Ctrl+C는 대기를 취소하고 기존 종료 처리
@@ -81,14 +82,14 @@ cd /home/sirlab2/sirlab258
 Pilot에서 별도 경로를 사용했다면 기존 --root/--failure-root/--pending-root 등 인자는
 그대로 유지한다. 기존 Dataset을 덮어쓰거나 다른 수집 데이터와 섞지 않는다.
 
-이번 개발에서는 실행하지 않았다. `s`+Enter 후 고정 reference 출력과 약60ms 뒤의
-검증 결과를 확인한다. 상태가 유효하면 자동 RECORDING으로 바뀌며 실패하면 오류를
-보이고 READY로 돌아간다. 첫 확인은 필요하면 움직임 없이 짧게 기록 후 r/d로 폐기해
+이번 개발에서는 실행하지 않았다. `s`+Enter 후 약60ms 뒤의 시작 검사 결과를 확인한다.
+일반 UI에는 고정 reference 숫자를 출력하지 않는다. 상태가 유효하면 자동 RECORDING으로
+바뀌며 실패하면 오류를 보이고 READY로 돌아간다. 첫 확인은 필요하면 움직임 없이 짧게 기록 후 r/d로 폐기해
 실제 성공 Dataset과 섞지 않는다. 장치 제어 명령/상태 조작을 자동으로 실행하지 않는다.
 
 기록을 저장해 확인하는 경우 Timing Sidecar에서 다음을 검사한다.
 
-- start_monotonic_ns가 처음 출력한 고정 reference와 같음
+- start_monotonic_ns가 시작 요청을 처리한 고정 t0와 같음 (검사 완료 시각으로 재설정되지 않음)
 - 첫 alignment.reference_monotonic_ns = start+50,000,000ns
 - 첫 schedule.deadline_monotonic_ns = start+110,000,000ns
 - 원본 Header<=해당 frame reference, frame_index는0부터 연속, slot=index+1

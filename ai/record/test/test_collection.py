@@ -487,5 +487,3 @@ def test_dataset_contract_change_blocks_even_if_episode_counts_match(managed):
     path.write_text(json.dumps(info))
     with pytest.raises(c.CollectionError, match="contract mismatch"):
         ledger.audit()
-
-

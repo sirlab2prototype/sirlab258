@@ -322,4 +322,3 @@ class HistoryAligner:
                           "history_counts": history["counts"], "recorded_action": origin,
                           "ignored_pre_episode_actions": self.ignored_pre_episode_actions,
                           "last_ignored_action_source": self.last_ignored_action_source}, self.target
-

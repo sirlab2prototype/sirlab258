@@ -20,7 +20,7 @@ Canonical workspace: `/home/sirlab2/sirlab258`
 - **최신 Recorder UI/교정 수집:** 사용자 `ready`를 제거하고 `s`에서 기존 배치/Attempt 확정을 수행한다. `x`는 RECORDING 중 교정 전환이며 `o`가 Success/Correction에 저장한다. 과거 Failure와 version 1 receipt는 보존하고 새 실패 Episode는 만들지 않는다. 교정 입력 수신/처리 시각과 첫 대응 기록 프레임을 별도 저장하며 교정은 Core-108 완료에 포함하지 않는다. 자세한 동작·호환 한계는 [Recorder 가이드](../ai/record/COLLECTION.md). 기존 제어·Topic·QoS·시간 정합성 검사는 유지했고 실제 장비는 실행하지 않았다.
 
 - **2026-10-31 추가 확인 — 정식 수집 관리:** 기존 Recorder에 opt-in `--collection-dir` 기반 Core-108 조건/Attempt/실제 Episode 연결을 추가했다. 원본 Shuffle과 ID를 유지하며 각 Region × Yaw의 6 Depth 균형을 코드로 검증한다. 원자적 JSON 장부·fsync·파일 잠금·저장 의도/receipt 대조를 사용하고, 증거가 불완전한 부분 저장은 차단한다. 사용법은 [수집 관리](../ai/record/COLLECTION.md). 로봇·시리얼 접속 없이 합성 Dataset과 fake ROS로만 검증하며 기존 시간 정합성 코드는 변경하지 않는다. 아래 2026-10-09 장애·실물 제한의 해제 근거는 이번 작업에서 추가되지 않았다.
-- **Pilot 구분:** 사용자 지정 `outputs/act_recorder_pilot_20261031`은 정식 진행률에 포함하지 않고 변경·삭제하지 않는다. 정식 기본 예시는 `datasets/indy7_act_core108/{success,failure,pending}`이며 실제 성공 수집 완료를 의미하지 않는다.
+- **Pilot 구분:** 사용자 지정 `outputs/act_recorder_pilot_20261031`은 정식 진행률에 포함하지 않고 변경·삭제하지 않는다. 정식 기본 예시는 `datasets/indy7_act_core108/{success,correction,failure,pending}`이며 실제 성공 수집 완료를 의미하지 않는다.
 
 - **현재 phase:** Indy7 + Mark7 수동 teleop 기반의 ACT demonstration 수집 준비. J6 장애로 실물 작업 중단.
 - **Robot 사용:** Indy7 실제 motion/write/reset/calibration 금지. 복원된 control + ACT publisher 조합은 fault 이후 실물 재검증하지 않았다.
@@ -28,7 +28,7 @@ Canonical workspace: `/home/sirlab2/sirlab258`
 - **현재 판단:** encoder/CORE의 지속 위치 계층 이상이 strongly supported인 **INFERENCE**. 구체적 failure mechanism은 **UNKNOWN**.
 - **복구 조사 진전:** 공식 LiveUSB + CORE Setting encoder service 경로는 확인. 현재 serial/FW의 J6 적용 절차와 robot-zero 복원 순서는 제조사 확인 필요. 문의 초안만 준비했으며 전송/답변 증거는 없다.
 - **다음 우선 작업:** 제조사에 장비별 진단·복구·영점 절차와 호환 service package 요청. 병행 가능한 offline 작업은 ACT 데이터 계약 불일치 정리.
-- **Git:** `main`, HEAD `a1b5e27` (2026-10-02). 기존 staged/unstaged/untracked 작업 다수 존재. ACT/docs/카메라 확장 등의 로컬 파일 존재는 commit 완료를 의미하지 않는다.
+- **Git (2026-10-31 정리 시작):** `main`, Recorder/Core-108/교정/UI 스냅샷 `b3bbb3b`. 학습·추론·실행·평가 및 QP QoS 등의 별도 미커밋 작업은 보존했다. 파일 정리 범위와 검증 결과는 [정리 조사 기록](PROJECT_CLEANUP_AUDIT.md)을 참고한다. 아래 과거 진단·불일치 기록은 당시의 관측이며 이번 정리에서 실물 상태를 다시 확인하지 않았다.
 
 ## 2. Project Goal
 
