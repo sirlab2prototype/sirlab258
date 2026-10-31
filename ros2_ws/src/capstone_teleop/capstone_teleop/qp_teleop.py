@@ -10,6 +10,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Joy, JointState
 from indy_interfaces.srv import IndyService
 from std_srvs.srv import Trigger
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from std_msgs.msg import Float32, Float64, String
 
 from neuromeka import IndyDCP3
@@ -235,7 +236,11 @@ class QPTeleop(Node):
         self.gripper_state_pub = self.create_publisher(
             Float32,
             '/capstone/gripper_state',
-            10,
+            QoSProfile(
+                depth=1,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            ),
         )
 
         self.create_timer(
