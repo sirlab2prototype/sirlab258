@@ -135,9 +135,9 @@ For separate-process operation without the launcher:
 ```
 
 Paths must be new; create/use only a scoped test/output directory. The old
-single-camera pool is historical and is not the `./act infer` path. Its legacy
-wire helpers are kept separate. No pool or blind-model selection is advertised
-as compatible with the new chunk client.
+single-camera pool and wire helpers were removed after preservation in Git
+`78794cf`. Only the v2 server/client documented here is supported; no pool or
+blind-model selection is advertised as compatible with this chunk client.
 
 ## One action owner
 

@@ -203,7 +203,7 @@ Joint guards are not collision avoidance. Workspace, basket/shelf/obstacles,
 load, stopping distance, feedback/communication latency and 20Hz suitability
 require supervised hardware validation before any Real activation.
 
-## Normalization defect found during integration
+## Historical: resolved normalization defect
 
 The earlier team training entry passed the standalone directory
 `train_metadata/stats.json` to official `load_stats()`, which instead searches
@@ -222,5 +222,6 @@ review. No official LeRobot source is changed.
 Offline tests use virtual-clock Mock devices, fake ROS classes and actual
 Synthetic LeRobot ACT checkpoints. The successful wiring fixture learns small
 constant hold/grasp labels; it proves software connectivity, not basket-task
-competence or real motor performance. All synthetic Dataset/model/cache files
-are scoped to project tmp and removed; small verification logs can be retained.
+competence or real motor performance. Synthetic Dataset/model/cache files are scoped to a unique project tmp. After
+verification, retain logs/results/provenance and remove only confirmed synthetic
+artifacts. Existing production data and Checkpoints are never cleanup targets.

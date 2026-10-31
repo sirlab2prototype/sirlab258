@@ -227,3 +227,12 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH="$PWD" .venv-act/bin/python -m pytes
 정상 화면·경고 로그 유지·기존 시간 무결성 회귀를 포함한다. 실제 PC 전원 차단·장비 동작 검증은 아니다.
 문법 검사, 실행 래퍼의 bash -n, git diff --check를 통과했다. 입력/영상/Dataset 계약 보호 함수의
 AST 대조도 통과했다. 실제 수집 데이터·Pilot·외부 라이브러리·학습 코드는 수정하지 않았다.
+
+## 장비 점검과 기존 Pilot
+
+두 RGB 토픽은 `camera_317222074298`/`camera_844212071939`의 color/image_raw이며
+640×480·30FPS 설정이다. 장비를 이 가이드에서 자동 시작하지 않는다.
+과거 동시 수신에서 프레임률 변동·844212071939의 USB2 연결이 관측됐으므로
+실제 mount/역할·USB 대역폭·timestamp는 승인된 운용 조건에서 확인한다.
+이전 Recorder 실물 입력 Pilot은 `outputs/act_recorder_pilot_20261031`에 보존하며
+정식 Core-108 완료나 최신 Correction의 실물 검증으로 확대하지 않는다.

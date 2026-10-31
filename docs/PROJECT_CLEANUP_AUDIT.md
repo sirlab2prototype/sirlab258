@@ -1,4 +1,8 @@
-# 프로젝트 정리 조사 기록 — 2026-10-31
+# 프로젝트 정리 조사 기록
+
+아래 1차 기록은 2026-10-31 당시 상태이며 현재 파일 목록이 아니다. 최신 정리는 문서 끝의 2026-11-01 항목을 따른다.
+
+# Historical — 2026-10-31 1차 정리
 
 대상은 `/home/sirlab2/sirlab258`, branch `main`이다. 기능 개발·하드웨어 실행 없이
 파일·문서만 정리했다. 조사 중 로봇/ROS 노드/카메라/시리얼을 실행하거나 접속하지 않았다.
@@ -18,7 +22,8 @@
 ## 분류와 참조 조사
 
 자체 파일 151개와 삭제 캐시 52개의 경로·역할·직접 참조·결정은
-[파일별 조사 목록](PROJECT_CLEANUP_INVENTORY.tsv)에 기록했다.
+당시 파일별 목록은 Git `bed7b4b:docs/PROJECT_CLEANUP_INVENTORY.tsv`에 보존했다.
+현재 트리의 재생성 가능한 오래된 TSV는 제거했으며 `git show`로 원문을 확인할 수 있다.
 분류는 A 52개, B 5개, C 65개, D 81개다. 신규 조사 문서 두 파일은 이 기준 목록에
 포함하지 않았다. 가상환경·외부 코드·실행 산출물은 아래 보호 영역 단위로 분류했다.
 
@@ -135,3 +140,98 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 \
   재구축·오류 복구 정보는 남겼으며 과거 기록 전체를 최신 기능 설명으로 다시 쓰지 않았다.
 - 정리 커밋은 `chore: remove obsolete files and consolidate project docs`로 별도 생성한다.
   정확한 최종 hash는 Git log와 최종 작업 보고를 따른다.
+
+## 2026-11-01 최종 정리 — 현행 결과
+
+위의 1차 조사·미커밋 수·보류 목록은 과거 상태다. 이번 정리 시작 시 `main` HEAD는
+`f7d03b93d3044d136fb14d960b38e3e2373398d4`였고, 미커밋은 Pool 세 파일뿐이었다.
+두 tracked 수정과 신규 `legacy_rgb_protocol.py`만 선별해
+`78794cfdebddf7d08d7f3c671027d6bc064509b6` (`chore: preserve legacy ACT pool before removal`)에
+먼저 보존했다. 이후 정리 커밋은 Git log를 따른다. reset/amend/rebase/push는 하지 않았다.
+
+### 삭제·통합 근거
+
+| 대상 | 조치·근거 |
+| --- | --- |
+| `ai/serve/{zmq_act_pool_server,select_act_pool_model,legacy_rgb_protocol}.py` | 3개 삭제. 단일 RGB/구형 wire·10D 경로이며 현행 두 영상·7D/v2와 불일치한다. CLI·Bash·테스트·launch에서 요구하지 않는다. 원문은 `78794cf`에 보존했다. |
+| `ai/train/configs/act_{a,b,c,d}_s{0,1,2}.yaml` | 12개 삭제. 실행 loader·입력·matrix 도구가 없는 과거 설계다. 당시 그룹/seed/step 설계는 configs/README에 남겼고 실제 실행 증거로 표시하지 않았다. 원문은 Git에서 복구 가능하다. |
+| `read_dataset_root_from_train_config()` | 미참조 helper와 그 전용 json import 제거. 활성 backend 함수·클래스 AST는 동일하다. |
+| `evaluate_overfit.pretrained_dir` | 미참조 호환 별칭과 그 전용 import 제거. 실제 CLI/평가 함수 AST는 동일하다. |
+| `ACT_SETUP.md` | 삭제. ACT 활성화·캐시·공식 예제 주의는 TRAINING, 카메라/기존 Pilot 주의는 COLLECTION, 장비 운용은 TELEOP으로 통합했다. |
+| `docs/PROJECT_CLEANUP_INVENTORY.tsv` | 오래된 생성 목록 삭제. 당시 원문은 `bed7b4b:docs/PROJECT_CLEANUP_INVENTORY.tsv`에 보존한다. 이 문서의 과거 결론과 새 결론을 구분한다. |
+| root `build/`, `install/`, `log/` | 과거 루트 colcon 생성물 삭제. 현재 wrapper/bootstrap은 `ros2_ws/install`을 사용한다. 23개 파일과 디렉터리 symlink를 정리했고 현재 workspace 생성물은 유지했다. |
+| `.hf_cache/` | 미사용 재생성 Arrow/metadata/lock 80개 삭제. 활성 캐시 참조·커널 lock이 없는 것을 확인했다. 모델 가중치/실제 Dataset은 없었다. |
+| `tmp/act_compat_pe61fnjr/{cache,scratch,validator,suite}` | 약2.15GB의 합성 Dataset·임시 Checkpoint·캐시 삭제. root 결과 XML·로그·verification·preservation·runner·before 목록은 유지하고, 실행/평가 메타데이터·로그 141개를 `evidence/`에 복사했다. |
+| 이번 `tmp/act_cleanup_1jj8_97d/{suite,cache,scratch}` | 검증 후 새 합성 산출물도 삭제. 결과 XML·로그·runner·benchmark·verification·preservation과 메타데이터 140개는 남겼다. |
+
+`benchmark_bounded_history.py`는 유용한 독립 합성 성능 도구라 유지했다. 현재 Recorder를
+import할 때 필요한 fake ROS QoS와 프로젝트 `tmp/` 격리 경로만 보완했다.
+기능 검사나 기존 테스트는 삭제·완화하지 않았다.
+
+### 문서 배치
+
+- README는 개요·진입점·문서 링크로 축소했다. 고유한 Xbox/장비·launch·수동 스택·OMY
+  운용 내용은 `docs/TELEOP.md`로 옮겼다. 과거 실물 검증과 현재 설정을 구분한다.
+- 새 AGENTS는 작업 시작·Git/미커밋·공식 소스·실물·데이터 보호와 관련 문서 갱신 규칙만 둔다.
+- PROJECT_CONTEXT는 현재 구현/데이터 흐름·검증 구분·기술적 제약·다음 작업을 담는다.
+  J6 최신 실측을 주장하지 않으며 기존 motion/write 제한과 해제 근거 필요성을 유지한다.
+- 기존 Context의 공식 복구 조사·배제 가설·제조사 질문은 J6 handoff §27로 옮겼다.
+- TRAINING/INFERENCE는 Pool 제거 상태, START_REFERENCE는 독립 resume와 Core 재개 차이,
+  EXECUTION/READINESS는 해결 이력·검증 증거 보존 방식을 정정했다.
+- 원본108개 조건표/Shuffle·수집 계획·Mark7/J6 장애 근거는 유지했다.
+
+### 오프라인 회귀 — 이번 실행
+
+2026-11-01, CPU 전용 **482 passed / 0 failed / 2 deselected**, 216.13초.
+CUDA 두 테스트만 명시적으로 제외했다. torchvision 영상 API deprecation 경고8건은 남아 있다.
+
+| 영역 | 통과 |
+| --- | ---: |
+| Recorder / Core-108 / Correction | 120 |
+| Dataset Validator | 54 |
+| 공식 ACT CPU 학습 / Checkpoint | 21 |
+| 추론 / RPC / Dry Run | 109 |
+| Mock Execution / Task | 101 |
+| 평가 | 64 |
+| 전체 Offline End-to-End | 13 |
+| 합계 | 482 |
+
+기존 전체 테스트 경로를 동일하게 사용했다. 108개 전체 합성 성공 저장, Shuffle·Attempt,
+일반/교정 저장·분리·마커, 시간/프레임 무결성·INVALID·Pending, 재시작·부분 저장·reconcile,
+과거 Failure 호환 및 공식 소형 ACT CPU3-step 연결을 포함한다. 실제 Dataset·최종 GPU 모델·
+장비 성능의 검증이 아니다. QP/Mark7 소스는 변경하지 않았고 별도 ROS 테스트를 이번에 재실행하지 않았다.
+
+```text
+bash tmp/act_cleanup_1jj8_97d/run_pytest.sh
+  --basetemp=<run>/suite --junitxml=<run>/results.xml --durations=12
+  --deselect=ai/serve/test/test_inference.py::test_actual_checkpoint_cuda
+  --deselect=ai/test/test_offline_end_to_end.py::test_connected_pipeline_cuda
+  ai/record/test ai/train/test ai/serve/test ai/execute/test ai/evaluate/test
+  ai/test/test_offline_end_to_end.py
+```
+
+이는 실제 단일 명령을 읽기 쉽게 줄바꿈한 기록이다. runner는 GPU 비활성, HF offline,
+no pycache/pytest cache, 새 임시 HF/Torch/TMPDIR와 CPU thread 제한을 설정했다.
+원본 명령·집계는 `tmp/act_cleanup_1jj8_97d/verification.json`에 남겼다. 재실행하려면
+격리 작업 디렉터리와 cache/scratch를 다시 만든다. 장비 실행·GPU 학습은 하지 않았다.
+
+- 별도 bounded benchmark: fake ROS, 3초/58 frames, sample19.999983FPS,
+  integrity valid·missed deadline0. Dataset을 생성하지 않았고 임시 Pending은 제거됐다.
+- 모든 자체 Markdown 상대 파일 링크, 변경 Python 구문·활성 함수 AST, Bash 진입점 구문과
+  `./act --help`, `git diff --check`를 확인했다. CLI 경로를 정적으로 대조했고 장비 wrapper는 실행하지 않았다.
+- `outputs` 388개 파일의 목록·SHA-256 일치, `.venv*`·`ros2_ws`·외부 소스의
+  목록/크기/mtime 일치를 확인했다. Recorder/Collection/시간 계약·원본108표·제어 소스도 유지했다.
+- `.git` 제외·symlink 미추적·논리 bytes 기준 시작 규모는 **58,629개 / 9,703,691,806 bytes**다.
+  최종 정확한 수치는 새 검증 디렉터리의 preservation 기록과 최종 보고를 따른다.
+  합성 결과물을 다시 정리해 순감소 약2.15GB를 확보했다. Git 복구 원문·검증 로그는 남긴다.
+
+### 유지·보류와 실제 다음 작업
+
+`requirements*.txt`, `act`, `act-train`, `act-record`, `caps`, bootstrap, pytest.ini는
+실제 의존성/dispatcher/호환 진입점이 있어 유지한다. `.venv*`, `ros2_ws/build/install/log`,
+공식 Indy·ROBOTIS·vendored LeRobot, 모든 기존 outputs/Pilot/실제 데이터·필요한 Checkpoint를 유지했다.
+`scripts/rotate_ros_image.py`는 외부 수동 실행 여부가 미확인이라 보류했다.
+
+다음은 실제 장비 상태/제한 해제 근거 확인과 별도 승인된 최신 Recorder 통합 검증이다.
+정상108개 실수집·feasible workspace 확인·최종 모델 학습/부하·실물 ACT 안전 검증은 이번에
+완료하지 않았다. Correction 학습은 미구현이다. 문서 정리나 Mock 통과로 실물 제한을 해제하지 않는다.

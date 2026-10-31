@@ -5,7 +5,7 @@ clock을 `t0`로 저장한다. 입력 thread는 명령 문자열과 수신 시�
 `s`의 시작 기준은 **메인 루프의 처리 시각**이다. `x` 교정 마커는 별도로 입력 수신
 시각을 사용한다. 조작·마커·복구 기준은 [운영 가이드](COLLECTION.md)를 따른다.
 
-## 이전 오류의 발생 경로
+## Historical — 시작 검증 오류의 발생 경로 (2026-10-31)
 
 `HistoryAligner.prepare(options, history, timing)`는 timing의 sample 시각을 기준으로
 Header가 그 시각 이하인 최신 수신 메시지를 검사한다. 이 메서드는 수신을 기다리지
@@ -72,7 +72,7 @@ polling 지연은 기존 기록 방식처럼 허용하되 t0는 옮기지 않는
 ## 실환경 확인
 
 이미 실행 중인 장치 스택을 별도로 재시작하지 않고 기존 실행 방식을 사용한다.
-기존 Dataset에 추가하는 경우:
+기존 독립 Recorder Dataset에 추가하는 경우 (Core-108은 COLLECTION의 같은 명령으로 재개):
 
 ```bash
 cd /home/sirlab2/sirlab258

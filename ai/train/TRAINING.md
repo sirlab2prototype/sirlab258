@@ -202,10 +202,9 @@ and a float32 state vector of length 7. Inputs are not mutated by these methods.
 Use only one action-consumption strategy per session. The current
 `RGBActBackend` extends `LeRobotActBackend` with two-camera/7D contract checks,
 and `./act infer` uses `zmq_act_server.py` with `indy7_act_rgb2_v2`.
-The separate historical `zmq_act_pool_server.py`/`select_act_pool_model.py` uses
-`legacy_rgb_protocol.py`; its single-camera/10D calls are incompatible with the
-current backend and it is not a supported Indy7 inference path. These legacy
-files remain unchanged pending a separate cleanup decision.
+The incompatible single-camera/10D pool, selector and legacy wire helper were
+removed. Their exact sources are preserved in commit `78794cf`; they are not a
+supported Indy7 inference path. The active server/protocol above is unchanged.
 Existing backend callers supplying a Dataset keep the compatibility path;
 new portable bundles should omit Dataset arguments.
 
@@ -221,3 +220,19 @@ verification hides CUDA and deselects CUDA cases explicitly. No real Dataset,
 real checkpoint, robot/camera or CUDA/AMP training is used in that run.
 Large-scale convergence, performance, safety and
 physical deployment require later validation.
+
+## 연구실 ACT 환경
+
+현재 PC의 `.venv-act`를 사용한다. ROS/제어용 `.venv`와 NumPy/ABI 의존성이 다르므로 합치지 않는다.
+
+```bash
+source scripts/activate_act.sh
+```
+
+`HF_HOME`을 별도로 지정하지 않으면 프로젝트 `.hf_cache`를 사용하며 캐시는 필요 시 재생성된다.
+HF 인증은 원격 자료가 필요한 경우에만 수행하고 토큰은 커밋하지 않는다.
+공식 학습 예제 `ai/lerobot_source/lerobot/examples/tutorial/act/act_using_example.py`는
+외부 다운로드를 할 수 있는 참고 자료이며 현재 Indy7 학습 진입점을 대체하지 않는다.
+현재 원래 Dataset ID를 유지하고 출력 경로는 새로 지정한다. `--dry-run`도 검증·계획 파일을 쓴다.
+장비 설정·실제 카메라 실행은 [Teleop 가이드](../../docs/TELEOP.md),
+수집 운영은 [COLLECTION](../record/COLLECTION.md)을 따른다.

@@ -1,5 +1,8 @@
 # Indy7 J6 Fault 및 ACT/LeRobot 작업 인수인계
 
+> Historical 진단 기록. 현재 실행·조작 기준은 [PROJECT_CONTEXT](PROJECT_CONTEXT.md)와
+> [수집 가이드](../ai/record/COLLECTION.md)다. 과거 키맵·repo id·관측값을 현재값으로 사용하지 않는다.
+
 작성 기준일: 2026-10-09 (Asia/Seoul)  
 대상 작업공간: `/home/sirlab2/sirlab258`
 
@@ -985,3 +988,57 @@ J1 statusWord는 545가 40회, J6는 520이 16회/545가 24회였다.
 확정하지 못했으며 추가 제어 쓰기 없이 진단 기록을 보존했다.
 
 > IP update (2026-10-29): `192.168.1.114` is the current connection target assigned by DHCP; the device has not yet been confirmed as the Indy7 controller.
+
+
+## 27. 2026-11-01 문서 통합: 이전 Context의 공식 복구 조사 보충
+
+아래는 기존 PROJECT_CONTEXT의 2026-10-09 조사·판단을 보존한 Historical 자료다.
+실물 재접속·복구 실행·최신 장비 상태 확인 결과가 아니다. 절번호와 당시 표현은 이전 Context 기준이다.
+
+### 11. Current Investigation / Evidence
+
+**FACT — 기존 실제 관측:** CONty J6 약 `-52677°`; DCP q/qdes 약 `-52678.1°`; safety ±215°; EtherCAT actual/target `969130066`; 다른 축 raw는 대략 수만 count. Power cycle 후 지속, SDK 3.3.2.3/3.4.2.2 일치. 당시 servo off / brake active, J6 errorcode=0. 상세·관측 시점 차이는 [handoff](INDY7_J6_FAULT_HANDOFF.md).
+
+**INFERENCE:** encoder multi-turn/동기화 또는 CORE의 지속 위치 처리 이상이 가장 유력. **UNKNOWN:** 배터리 방전, corruption/overflow, configuration·통신 문제 중 실제 원인; 실제 encoder vendor/model; 물리 J6 slave 번호. 큰 raw 숫자는 특정 fault code가 아니다.
+
+**인수인계 이후 판단 갱신 — 2026-10-09**
+
+- **Previous assessment:** handoff §1/§15에서 LiveUSB/CORE service 복구 경로 미확인.
+- **Updated assessment:** 공식 [CORE Setting using LiveUSB](http://docs.neuromeka.com/3.5.0/en/CORE/section5/)에 잘못된 encoder 위치를 다루는 service 앱 존재. 도구는 `MasterCtrl.sh`, `CORESetting.sh`; 특정 CORE 선택 기능도 설명됨. 현재 serial/FW 호환성·J6만의 영향 범위·robot-zero 복원은 미확정.
+- **Reason:** 공식 문서 3.2/3.5 본문과 GUI 확인. 배터리 교체 후 multi-turn chip 오류 해제 및 single/multi-turn 재동기화가 문서화됨. 이를 모든 잘못된 위치에 그대로 적용하는 처방으로 해석하지 않는다.
+
+추가 사실:
+
+- 공식 CORE 자료는 배터리 기반 multi-turn 유지를 설명한다. 오류표에는 배터리 부족 `FF10`, encoder error `FF11`, CRC/configuration `FF12`, 단선 `FF13`, 자동 동기화 후 power reset `FF14`가 있음. **현재 J6에서 관측한 코드가 아님**. 적용 FW 범위 확인 필요. [공식 오류표](http://docs.neuromeka.com/3.5.0/en/CORE/section3/#error_code-object-0x603f)
+- SDK `reset_servo`는 servo error reset, zero setter는 현 위치 zero 지정. **새 발견** `reset_overflow_count()`는 축 인자 없이 overflow count를 reset/save한다고만 설명. 대상/범위 미확인, 전부 실행하지 않음. Zero getter 원본 주석 `Agri CamRobot`도 Indy7 적용 확인이 필요한 이유. [공식 SDK 고정 commit](https://github.com/neuromeka-robotics/neuromeka-package/blob/d33d027fd1b2b8378b3ffdf312f334a9657524f8/python/neuromeka/ecat.py)
+- 공식 SDO 표에서 표준 `home_offset` 이름은 온도, `homing_method`는 calibration, 일부 object는 내부 제어용으로 재사용됨. 추측 SDO 금지의 직접 근거. [Complete SDO List](http://docs.neuromeka.com/3.5.0/en/resources/CORE/Neuromeka_CompleteSDO_List.pdf)
+- **현재 terminal 결론 C:** 이 장비에 안전한 복구 명령과 영점 복원 전체 절차는 제조사 필요. 공식 도구를 확보하는 B 경로의 존재는 확인됐으나 바로 실행할 수 있다는 뜻은 아님.
+
+Raw 보존 경로: `/tmp/indy7_j6_readonly_diagnostic.txt`, `/tmp/indy_sdk_3_3_2_3.json`, `/tmp/indy_sdk_3_4_2_2.json`, `/tmp/proto_3_3_2_3.json`, `/tmp/proto_3_4_2_2.json`, `/tmp/indy_keyword_audit.txt`. 전체 로그를 이 문서에 복사하지 않는다.
+
+
+### 12. Ruled Out / Lower Priority Hypotheses
+
+- Python/protobuf decoding regression: 두 SDK의 동일 q/qdes·field layout 및 PDO 관측으로 사실상 배제.
+- ROS JointState 단위 변환: ROS 이전 raw PDO와 CONty에도 이상이 있어 원인 우선순위 낮음.
+- LeRobot recorder, action/gripper publisher가 J6 target을 생성·변조했다는 가설: 구독/publish-only 코드와 기록에서 근거 없음.
+- 현재 qp_teleop이 계속 이상을 만든다는 가설: 복원 stack을 실행하지 않은 상태에서도 이상 지속.
+- ACT 과정의 encoder zero/calibration/SDO write: 실행 흔적을 찾지 못함. **API 존재는 실행 증거가 아님**, 흔적 부재가 모든 미관측 사건의 부재 증명은 아님.
+- Dual DCP client 자체: 과거 정상 사용 사실이 있어 직접 원인으로 단정 금지.
+- 단순 transient RAM/TELE_OP latch: 완전 power cycle 후 지속하여 우선순위 낮음.
+- **남은 UNKNOWN:** 최초 teleop/mode transition이 fault를 촉발했는지. `target==actual`만으로 과거 teleop 명령이라고 단정하지 않음.
+- Zero getter의 빈/default 0, SDK3.4 `is_robot_connected=false`/`calibrated=false` 등은 실제 zero·연결 단절·미보정 증거로 단정하지 않음. 약 40.2는 position이 아니라 과거 temperature 정정값.
+
+
+### 14. External Dependencies / Waiting
+
+**Neuromeka에 받아야 할 것:**
+
+- Serial `PD47I7E0D002`의 J6 CORE/encoder 모델, board revision, 배터리 사양, slave 매핑 및 firmware별 오류표.
+- 호환 LiveUSB/image와 CORE Setting tool 버전, 설치 로봇에서의 service 연결·master 전환·전원/브레이크 조건, 한 축만 처리하는 방법.
+- Chip 정보/상태/동기화 및 error/CRC 이력을 확보하는 승인된 read-only 방법; `969130066` 관련 알려진 문제 유무.
+- 상태별 encoder 처치, 부품 교체 판단, 변경 전 backup, 실패 시 rollback, 물리 기준 자세/지그와 robot-zero/factory calibration 복원 순서.
+- `ResetOverflowCount`의 대상·저장 위치·축 범위, `ResetServo`의 encoder 영향, Indy7 zero API 지원 및 default 0 의미.
+- CLI/SDO 복구를 권한다면 정확한 도구·버전·인자 또는 해당 FW의 공식 정의와 검증 조건.
+
+**상태:** 제조사 문의 전송/접수/답변, service image 수령, 부품 주문·도착 모두 확인된 기록 없음. 실제 진행되면 날짜·요청/답변 근거·영향을 갱신한다. OMY/D405 관련 reference 정보는 현 Indy 복구 의존성으로 확정되지 않았다.

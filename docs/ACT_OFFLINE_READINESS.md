@@ -1,6 +1,7 @@
 # ACT 운영 준비도와 실기 차단 조건
 
-이 문서는 소프트웨어 연결 검증과 실제 장비 검증을 분리한다. 오프라인 성공은
+이 문서는 소프트웨어 연결 검증과 실제 장비 검증을 분리한다. 최신 실행 ID·검증 수치는
+[PROJECT_CONTEXT](PROJECT_CONTEXT.md#검증-범위)를 기준으로 한다. 본문의 CPU/CUDA 설명은 과거 합성 검증 범위이며 최신 CPU 회귀에서 CUDA를 재실행했다는 뜻이 아니다. 오프라인 성공은
 실제 Indy7·Mark7 동작 성공이 아니다. 실행 순서는 루트 README의 ACT 운영 순서를
 따른다. 설치/build는 장치 실행이 아니며, `./caps`는 실제 장치와 QP를 시작하는
 별도의 명시적 명령이다. 이번 검증에서는 실행하지 않는다.
@@ -82,6 +83,7 @@ Grasp/운반/배치/후퇴 능력을 학습한 정책이 아니다. 서비스 �
 Mock 장애 주입으로 검증한다. CPU/CUDA 수치는 작은 모델·짧은 시행의 측정치다.
 최종 크기 모델·장시간·ROS/하드웨어 20Hz 성능으로 일반화하지 않는다.
 
-검증 산출물은 실행별 `outputs/act_final_offline_*`에서 확인한다. 테스트용 Dataset과
+과거 검증 기록은 `outputs/act_final_offline_*`, 최신 회귀 기록은 Context가 가리키는 격리 tmp에서 확인한다.
+합성 원본을 정리한 경우에도 작은 결과·로그·실행 metadata는 보존하며 기존 outputs는 수정하지 않는다. 테스트용 Dataset과
 Checkpoint는 `synthetic_dataset`, `train_cpu`, `train_cuda`로 명확히 구분하며 실제
 수집/운영 Dataset과 섞지 않는다. 실제 장비 성공률은 작업자 평가 전까지 unknown이다.
