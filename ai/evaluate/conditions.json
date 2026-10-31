@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "source": "docs/ACT_Data_Collection_Plan.md sections 5, 6, 11; candidates pending pilot",
+  "collection_goal_success_demonstrations": 108,
+  "planned_unseen_evaluation_trials_approximate": 60,
+  "regions": ["L", "C", "R"],
+  "yaw_bins": [
+    {"id": "A1", "min": -40, "max": -27},
+    {"id": "A2", "min": -27, "max": -13},
+    {"id": "A3", "min": -13, "max": 0},
+    {"id": "A4", "min": 0, "max": 13},
+    {"id": "A5", "min": 13, "max": 27},
+    {"id": "A6", "min": 27, "max": 40}
+  ],
+  "depth_conditions": ["Front", "Front-Middle", "Middle", "Middle-Back", "Back", "Random"],
+  "depth_bins_cm": [],
+  "note": "Depth is continuous and yaw-dependent; no measured cm boundaries are assumed. Bin intervals are [min,max), final upper boundary inclusive."
+}

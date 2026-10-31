@@ -32,9 +32,9 @@ That example may download public artifacts from Hugging Face.
 ## Train the project RGB-only dataset
 
 ```bash
-./act-train \
+./act train \
   --dataset-dir /absolute/path/to/lerobot_dataset \
-  --dataset-repo-id your-user/your-dataset \
+  --dataset-repo-id local/indy7_act \
   --output-dir outputs/act_run \
   --steps 100000
 ```
@@ -42,6 +42,13 @@ That example may download public artifacts from Hugging Face.
 Use `--dry-run` to validate the dataset and print the resulting LeRobot
 training command without starting optimization. Training defaults to CUDA;
 pass `--device cpu --no-use-amp` only for a small functional check.
+
+For formal Core-108 collection, pass `--dataset-dir datasets/indy7_act_core108/success`
+and the original Dataset repo id. The Collection root itself is not a Dataset;
+Correction/Failure/Pilot are not merged into training. `./act validate` performs
+read-only Dataset preflight; its optional `--report` writes a new file outside
+the Dataset. `./act train --dry-run` also writes a new plan/output directory.
+See [the training guide](ai/train/TRAINING.md) for complete commands.
 
 ## Camera observations
 

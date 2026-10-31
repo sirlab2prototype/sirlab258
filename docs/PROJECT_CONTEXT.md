@@ -1,6 +1,7 @@
 # SIRLab258 Project Context
 
-최초 작성 / 마지막 확인: **2026-10-09 (Asia/Seoul)**  
+최초 작성: **2026-10-09** / 소프트웨어 마지막 확인: **2026-10-31 (Asia/Seoul)**
+실물 장애 정보는 과거 관측이며 이번에는 재접속하지 않았다.
 Canonical workspace: `/home/sirlab2/sirlab258`  
 목적: 새 세션·다른 계정의 agent가 현재 상태와 결정사항을 5~10분 안에 파악하는 living context.
 
@@ -27,8 +28,8 @@ Canonical workspace: `/home/sirlab2/sirlab258`
 - **핵심 blocker:** J6 DCP q/qdes 약 `-52678.1°`, EtherCAT actual/target position `969130066`; 완전 power cycle 후에도 지속.
 - **현재 판단:** encoder/CORE의 지속 위치 계층 이상이 strongly supported인 **INFERENCE**. 구체적 failure mechanism은 **UNKNOWN**.
 - **복구 조사 진전:** 공식 LiveUSB + CORE Setting encoder service 경로는 확인. 현재 serial/FW의 J6 적용 절차와 robot-zero 복원 순서는 제조사 확인 필요. 문의 초안만 준비했으며 전송/답변 증거는 없다.
-- **다음 우선 작업:** 제조사에 장비별 진단·복구·영점 절차와 호환 service package 요청. 병행 가능한 offline 작업은 ACT 데이터 계약 불일치 정리.
-- **Git (2026-10-31 정리 시작):** `main`, Recorder/Core-108/교정/UI 스냅샷 `b3bbb3b`. 학습·추론·실행·평가 및 QP QoS 등의 별도 미커밋 작업은 보존했다. 파일 정리 범위와 검증 결과는 [정리 조사 기록](PROJECT_CLEANUP_AUDIT.md)을 참고한다. 아래 과거 진단·불일치 기록은 당시의 관측이며 이번 정리에서 실물 상태를 다시 확인하지 않았다.
+- **다음 우선 작업:** 제조사에 장비별 진단·복구·영점 절차와 호환 service package 요청. 병행 작업은 CPU 검증된 미커밋 ACT 구현 검토와 실제 수집 준비다. 실물 제한은 유지한다.
+- **Git (2026-10-31 호환성 검증):** `main`, HEAD `bed7b4b`, Recorder/Core-108/교정/UI 스냅샷 `b3bbb3b`. 이번에는 add/commit/push하지 않았다. 학습·추론·실행·평가 및 QP QoS 등의 별도 미커밋 작업은 보존했다. 1차 정리 범위는 [정리 조사 기록](PROJECT_CLEANUP_AUDIT.md), 최신 CPU 검증은 §10을 참고한다. 과거 진단 기록은 실물 상태를 다시 확인한 결과가 아니다.
 
 ## 2. Project Goal
 
@@ -67,14 +68,14 @@ SDK 3.3.2.3 비교 환경은 `/tmp/indy_sdk_3_3_2_3`에 있다. 최신 3.5.0.10�
 | `ros2_ws/src/capstone_teleop` | QP teleop, input profile, GUI, launch와 robot/camera config |
 | `ros2_ws/src/capstone_mark7` | Mark7 serial node, config, protocol test |
 | `ros2_ws/src/external/indy-ros2` | 공식 Indy submodule; `jazzy-indyDCP3`, `ca0353f077620c877c1edff2e26c8cd976773f27`, clean |
-| `external/open_manipulator` | OMY 공식 submodule; 설정 branch `jazzy`, `9f84095404d3e596267cd520e90963011059ebf6`, clean. gitlink는 staged 추가 |
+| `external/open_manipulator` | OMY 공식 submodule; 설정 branch `jazzy`, `9f84095404d3e596267cd520e90963011059ebf6`, clean. gitlink는 이미 커밋됨 |
 | `ai/record` | Indy7 두 RGB 카메라 / 7D state-action recorder |
-| `ai/train`, `ai/serve` | ACT training/evaluation 및 serving 코드. Indy 데이터 계약과 맞지 않는 부분이 남아 있음 |
+| `ai/train`, `ai/serve`, `ai/execute`, `ai/evaluate` | 두 카메라·절대 7D 학습/추론·Mock 실행·평가의 미커밋 구현. 과거 pool은 별도 구형 경로 |
 | `ai/lerobot_source/lerobot` | LeRobot 0.5.1 vendored source; provenance는 `UPSTREAM.md` 참고 |
 | `scripts`, root wrappers | 환경 활성화·편의 실행·진단. `caps`, `act-record`, `act-train` 등 |
 | `docs` | 이 canonical context, J6 상세 handoff, ACT 수집 계획·실행기록 template |
 | `.venv`, `.venv-act`, `.hf_cache` | 로컬 환경/캐시. Git 제외 |
-| `datasets`, `outputs`, `checkpoints`, `recordings` | 생성 산출물 예정 경로, Git 제외. **현재 root에서 이 디렉터리들은 없음** |
+| `datasets`, `outputs`, `checkpoints`, `recordings` | 생성 산출물, Git 제외. `outputs/`에 Pilot/이전 검증 자료가 존재한다. 정식 수집 완료 근거로 취급하지 않으며 보존한다 |
 | `ros2_ws/build`, `install`, `log` | 생성 빌드/검증 산출물. source와 구분하고 다른 PC로 재사용하지 않음 |
 
 Reference project는 `/home/sirlab2/minseo/capstone`(control 복원 비교 기준), `/home/sirlab2/pipet-physical-ai`(과거 정상 물리 teleop reference). Reference의 기능·검증 결과를 현재 repo에 적용된 것으로 기록하지 않는다.
@@ -98,11 +99,17 @@ Reference project는 `/home/sirlab2/minseo/capstone`(control 복원 비교 기�
 | 두 RGB topic | `/camera_317222074298/camera/color/image_raw`, `/camera_844212071939/camera/color/image_raw` |
 | Recorder | `act-record` → ROS/workspace + ACT 환경 → `ai/record/indy7_act_record.py`; robot driver 시작/정지 없이 구독만 수행 |
 | Dataset | 기본 20 FPS, `local/indy7_act`, `datasets/indy7_act`; 두 RGB video + state/action 각각 7D (`joint0…5` rad + gripper) |
-| Sampling | 최신 수신값과 monotonic 수신 시각 사용. State/image freshness <0.25s 및 gripper 최초 수신 요구. Header timestamp 동기화가 아니며 action/gripper age 검사는 없음 |
+| Sampling | BoundedHistory/HistoryAligner의 인과적 Header·수신 시각 선택. 20Hz 고정 기준, 60ms 수신 여유, camera age50ms/state75ms·skew·clock·deadline 무결성 검사. Gripper 최초 확인 필요 |
 | Action fallback | 최초 action 수신 전 measured state 사용; 수신된 action은 이후 유지됨 |
-| Episode 조작 | `s/a/r/d/q` 및 full commands; save 최소 2 frames. discard는 이미 저장된 episode를 삭제하지 않음 |
+| Episode 조작 | `s` 준비·시작, `x` 교정 전환, `r` REVIEW, `o` 유형별 저장, `d` 폐기, `q` 종료. 최소 2 frames, INVALID 저장 차단·Pending 보존 |
 
-`act-train` → `.venv-act` → `ai.train.run_train` → LeRobot trainer. 기본 repo id `sirlab/grip_all`은 recorder와 다르므로 실제 데이터에 맞춰 지정해야 한다. 기본 CUDA/AMP, 100k steps, batch 64, workers 14, chunk 40/action steps 10, hub push 없음. **현재 Indy7 autonomous inference로 연결된 완료 시스템은 아니다.**
+`./act train` → 기존 `act-train` → `.venv-act` → `ai.train.run_train` → 공식 LeRobot trainer.
+기본 repo id는 Recorder와 같은 `local/indy7_act`, workers4, batch64, 100k steps,
+chunk40/action steps10, CUDA/AMP이며 hub push는 없다. Core-108에서는 기본 독립 경로
+대신 `--dataset-dir datasets/indy7_act_core108/success`를 명시한다. Validator → Episode
+분할 → Train 전용 통계 → 학습 → checkpoint 재로딩·역정규화 → held-out 평가 경로가 있다.
+`./act infer`는 두 카메라/7D v2 서버와 Dry Run, execute/task는 Mock만 제공한다.
+**Real ACT/Task/Home은 잠금 상태이며 Correction 학습은 구현하지 않았다.**
 
 주요 config의 원본은 [indy7.yaml](../ros2_ws/src/capstone_teleop/config/indy7.yaml), [mark7.yaml](../ros2_ws/src/capstone_mark7/config/mark7.yaml), [camera config](../ros2_ws/src/capstone_teleop/config/camera_rgb_only.yaml), [serial registry](../ros2_ws/src/capstone_teleop/config/rgb_cameras.yaml).
 
@@ -123,17 +130,29 @@ Reference project는 `/home/sirlab2/minseo/capstone`(control 복원 비교 기�
 | 복원 control + ACT publishers | **CODE VERIFIED — 2026-10-09 정적 비교**: minseo 대비 `qp_core.py`, `input_profile.py`, `indy7.yaml` 동일. `qp_teleop.py` 차이는 publish-only 추가. **현재 HEAD 대비 diff 전체가 publish-only라는 뜻은 아님** |
 | Offline QP/input tests | **CODE VERIFIED — 저장 결과**: `ros2_ws/build/capstone_teleop/pytest.xml`, 2026-10-09 01:24:12, 12 tests / errors 0 / failures 0 / skipped 0. 이번 재실행 없음 |
 | Teleop package build | **BUILD VERIFIED — 저장 결과**: `ros2_ws/log/build_2026-10-09_01-23-44/logger_all.log`, capstone_teleop 한 패키지 성공. 최신 전체 workspace build로 확대하지 않음 |
-| Recorder / camera / training wrappers | **CODE VERIFIED — 정적 소스 확인**. 실제 Indy dataset 저장·학습·배포의 end-to-end 검증은 미확인 |
+| ACT 소프트웨어 연결 | **CPU OFFLINE VERIFIED — 2026-10-31:** Recorder→Validator→공식 ACT 3-step 학습→Checkpoint→합성 Dry Run→Mock 실행/Task→평가. 실제 장비·실제 Dataset·GPU 최종 모델 검증과는 별개 |
 | 두 camera 동시 영상 | 과거 ACT_SETUP의 image 수신 관측. 안정적인 FPS/no-frame-drop/synchronization 검증 완료가 아님 |
 | J6 read-only 진단 | **REAL ROBOT VERIFIED — handoff의 기존 관측**: DCP/PDO/CONty 및 power-cycle 결과. 이는 복구 성공·motion 검증이 아님 |
-| 현 문서 작성 세션 | 로컬 read-only 확인 및 문서 구조/링크/변경 범위 검증만 수행. Test/build/로봇 호출 없음 |
+| 최초 문서 작성 세션 (Historical, 2026-10-09) | 당시 로컬 read-only 확인 및 문서 구조/링크 검증만 수행. 당시 Test/build/로봇 호출 없음 |
 
 저장된 최근 package build는 `--symlink-install`을 사용했지만 이는 capstone_teleop 한정 과거 명령이다. 공식 Indy를 포함한 빌드는 README/bootstrap의 일반 `colcon build` 원칙을 따른다.
 
 ## 7. Current Known Issues
 
-1. **P0 — J6 persistent abnormal position:** motion 불가. 상세 [INDY7_J6_FAULT_HANDOFF.md](INDY7_J6_FAULT_HANDOFF.md), 최신 추가 증거는 §11.
-2. **현재 복원 stack 실물 재검증 미완료:** 코드/과거 build 통과를 실제 로봇 정상화로 취급하지 않는다.
+1. **P0 — J6 persistent abnormal position:** 기존 장애 기록과 motion 금지는 유지한다. 이번 소프트웨어 검증은 복구 증거가 아니다. 상세 [인계](INDY7_J6_FAULT_HANDOFF.md), §11.
+2. **실물 전체 stack 미검증:** 실제 카메라·DDS QoS·clock·Gripper 응답·제어/정지는 이번에 확인하지 않는다.
+3. **실제 정식 수집/모델 미확인:** outputs의 Pilot/합성 검증 결과를 108개 실제 성공 Demonstration이나 정책 성능으로 집계하지 않는다.
+4. **소프트웨어 호환성:** 과거 학습 테스트의 SAVED 문자열 검사를 실제 Dataset·Episode·timing·전체 영상 증거 검사로 바꿨다. CPU 회귀 검증 결과는 §10에 기록한다. 현재 backend는 두 카메라·7D, Hold는 측정 관절6개+명령 gripper index6이다.
+5. **구형 pool 잔여물:** 10D/단일 RGB 호출과 현재 backend API 불일치가 남아 있다. pool·selector·legacy protocol은 이번에 수정/삭제하지 않으며 현행 `act infer` 경로와 분리한다. 과거 YAML12개·회전 도구도 보존한다.
+6. **Gripper 의미/QoS:** QP Publisher와 Recorder Subscriber는 RELIABLE/TRANSIENT_LOCAL/depth1, 추론 RosSource는 RELIABLE/VOLATILE/depth10이다. 모두 실제 파지 센서 피드백이 아닌 성공 명령 상태다. 무명령 초기 실제 위치 조회는 미확인이다.
+7. **재현성·범위:** 학습/추론/Mock/평가 구현은 미커밋이다. 구형 YAML은 실행 설정이 아니고, GPU 수렴·성능과 실제 로봇 안전성은 별도 검증 대상이다. Correction Dataset 혼합 학습을 지원한다고 가정하지 않는다.
+
+### Historical — 2026-10-09 이전 평가
+
+아래는 당시 소스/환경에 대한 기록이다. 현재 Known Issues와 구분한다.
+Previous assessment는 아래와 같고, Updated assessment는 위 목록이다.
+Reason: 2026-10-31 작업 트리의 공유 데이터 계약·학습·추론 구현 및 최신 Recorder와 대조했다.
+
 3. **수집·학습 산출물 미확인:** 현재 workspace에 dataset/output/checkpoint 경로가 없고 108행 수행표의 목표/실측/결과 칸은 비어 있다. 다른 경로·과거 수행 여부까지 부정하는 것은 아니다.
 4. **ACT 데이터 계약 불일치:** `rgb_act_backend.py`는 camera 1개만 허용; 현재 recorder는 2개. `run_train.py` baseline은 joint들을 0으로 예측하고 gripper만 복사하며 XYZ delta용 설명을 유지. `evaluate_overfit.py`는 gripper index 3, 현재 데이터는 6. Pool server에는 10D warmup/없는 model registry 가정이 남아 있다. 학습 지표·실기 배포 전에 별도 수정/검증 필요.
 5. **Camera/timing:** USB2 관측 카메라의 delivery 안정성, 실제 역할/고정 mount, latest-value sampling의 시간차·action freshness를 pilot 전에 검증해야 한다.
@@ -149,7 +168,7 @@ Reference project는 `/home/sirlab2/minseo/capstone`(control 복원 비교 기�
 - ROS `.venv`와 ML `.venv-act`를 분리한다. ROS NumPy 1.26.4를 ML 환경의 NumPy와 무조건 통일하지 않는다.
 - 생성 데이터/모델/환경·토큰은 Git에 넣지 않는다. 문서 갱신은 commit/push 허가가 아니다.
 - 실행했음 / 코드에 존재함 / reference에 있음 / 계획 중임을 구분한다. 장애 시 시간적 선후관계만으로 ACT를 원인으로 확정하지 않는다.
-- **이번 사용자 요청 범위:** `PROJECT_CONTEXT.md`만 생성/수정. 발견한 source/config/기존 문서 문제는 수정하지 않고 Pending으로 남긴다.
+- **Historical — 2026-10-09 요청 범위:** 당시에는 이 context만 수정했다. 현재 요청은 테스트·문서 호환성 수정과 CPU 오프라인 검증이며, Git commit/push·기존 파일 삭제·실물 실행은 하지 않는다.
 
 ## 9. Safety / Do Not Do
 
@@ -166,6 +185,13 @@ Reference project는 `/home/sirlab2/minseo/capstone`(control 복원 비교 기�
 **Resolved History:** 현재 J6 제한 해제 기록 없음. 추후 해제 시 제조사 절차·실물 검증·사용자 승인 범위와 날짜를 여기에 남긴다.
 
 ## 10. Recent Changes
+
+**2026-10-31 — 최신 Recorder와 ACT 테스트·문서 호환성 검증**
+- 영문 저장 메시지 assertion을 실제 저장 상태·Episode Index·metadata·timing·전체 영상 검증으로 대체했다. Recorder/Collection/제어·QoS·안전 설정은 바꾸지 않았다.
+- Core-108 success 경로와 train/validate 사용법, 현행 두 카메라 backend·QoS를 정정하고 과거 연구 설명을 Historical로 보존했다.
+- CPU 합성 회귀 **482 passed / 0 failed / CUDA 2 deselected** (215.98s). Recorder/Collection/Correction120, Validator54, 학습/Checkpoint21, 추론/Dry Run109, Mock 실행/Task101, 평가64, 전체 연결13개다. 앞선 Validator 단독54개는 중복 집계하지 않는다.
+- 실제 공식 ACT 소형 모델의 3-step CPU 학습, Train/Validation 분리·정규화·재로딩·합성 추론·Mock Task/Home·평가를 확인했다. 108개 전체 합성 저장·강제 종료/reconcile도 통과했다. 실제 성능·물리 성공·GPU 수렴을 의미하지 않는다.
+- 원본 로그/JUnit/새 합성 데이터는 `tmp/act_compat_pe61fnjr/`에 격리했다. TorchVision 영상 API deprecation 경고8건을 확인했으며 외부 라이브러리는 수정하지 않았다. 실제 장비·기존 Pilot/데이터·Pool/YAML/회전 도구는 변경하지 않으며 add/commit/push/기존 파일 삭제는 하지 않는다.
 
 **2026-10-31 — Recorder 한국어 UI / 교정 시연 수집**
 - 순차 출력 한국어 화면, `help/guide`, 현황과 요약 이력·세부 JSON 접근을 추가하고 정상 화면의 환경/상세 설정 로그를 제거했다.
@@ -240,12 +266,12 @@ Raw 보존 경로: `/tmp/indy7_j6_readonly_diagnostic.txt`, `/tmp/indy_sdk_3_3_2
 | P0 **TODO** | 사용자와 제조사 문의 진행: §14 자료 요청. 문의 초안은 존재하지만 이 대화에서 전송하지 않았음; 외부 전송은 명시적 요청 후 수행 |
 | P0 **WAITING FOR VENDOR — 자료 필요, 접수 미확인** | Serial/FW별 service package, J6-only 절차, backup/rollback 및 physical-zero/robot-zero 복원 지침 확보 |
 | P0 **BLOCKED** | 위 절차로 실제 정비·복구 후 physical pose/CONty/DCP/PDO 일치와 지속성 검증. 현재 조사 권한으로 실행하지 않음 |
-| P1 **READY — 별도 source 변경 작업** | ACT absolute 7D·2-camera 계약에 맞춰 baseline/evaluation/serving 및 없는 실험 참조 정리. 현재 문서 작업에서는 수정하지 않음 |
+| P1 **소프트웨어 검증 / 실물 미검증** | absolute 7D·2-camera 학습/추론·Mock/평가 구현과 최신 Recorder의 CPU 호환성 결과를 §10에서 확인. GPU·실제 수집 데이터·실물은 별도 검증 |
 | P1 **BLOCKED** | J6 제한 해제 근거 기록 후 restored teleop + publish-only 경로를 승인된 실물 조건으로 검증 |
 | P1 **TODO / 물리 pilot는 BLOCKED** | Camera serial-role/mount, USB3 delivery, 시간차/action freshness 검증 계획 확정 |
 | P2 **BLOCKED** | 5~10 pilot 및 dataset 무결성 확인 → feasible workspace/yaw 확정 → shuffle된 108 successful episodes 기록 |
 | P2 **BLOCKED** | 실제 dataset으로 ACT 학습/평가, 약 60 unseen pose 및 실패 영역 보강. 모델·dataset의 출처/검증 범위 기록 |
-| P3 **TODO — 별도 문서 작업** | README/ACT_SETUP/handoff의 오래된 표현과 editable metadata 차이 정리. 이번에는 이 context에 차이만 기록 |
+| P3 **일부 정정 / 보존 판단 대기** | Core-108 학습 경로·backend·QoS 안내를 현재 소스에 맞췄다. 구형 pool/YAML/회전 도구의 보존·삭제 결정과 미커밋 구현의 별도 검토가 남았다. editable metadata는 변경하지 않음 |
 
 ## 14. External Dependencies / Waiting
 
@@ -284,7 +310,7 @@ cat ros2_ws/build/capstone_teleop/pytest.xml
 
 - [J6 상세 장애 인수인계](INDY7_J6_FAULT_HANDOFF.md): 원 진단·복원·실행 여부·로그. **공식 LiveUSB 조사 이전 문구는 이 context §11이 갱신한다.**
 - [ACT_SETUP](../ACT_SETUP.md): 환경/recorder/training 사용법. 현재 motion 금지 우선.
-- [README](../README.md): 수동 stack·OMY·과거 물리 검증. §7의 오래된 내용에 주의.
+- [README](../README.md): 수동 stack·OMY·ACT 운영 순서. 과거 물리 검증과 이번 CPU 소프트웨어 검증을 구분한다.
 - [ACT 수집 계획](ACT_Data_Collection_Plan.md): 목표/coverage/pilot/evaluation 계획.
 - [108 Episode 수행표](ACT_108_Episode_Execution_Log_Template.md): shuffle된 계획, 완료 데이터가 아님.
 - [Vendored upstream 기록](../ai/lerobot_source/UPSTREAM.md), [기존 training config 설명](../ai/train/configs/README.md): provenance/기존 가정 참고; 현 git 상태·Indy 계약과 구분.
