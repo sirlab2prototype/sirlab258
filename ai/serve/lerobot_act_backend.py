@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +27,10 @@ def resolve_pretrained_model_dir(model_path: str) -> Path:
     sub = p / "pretrained_model"
     if sub.is_dir() and (sub / "config.json").is_file():
         return sub.resolve()
+    for relative in ("training/checkpoints/last/pretrained_model", "checkpoints/last/pretrained_model"):
+        candidate = p / relative
+        if (candidate / "config.json").is_file():
+            return candidate.resolve()
     raise FileNotFoundError(
         f"Expected config.json under {p} or {sub} "
         f"(a LeRobot pretrained_model directory, or checkpoints/XXXXXX|last)."
@@ -48,8 +53,8 @@ class LeRobotActBackend:
     def __init__(
         self,
         pretrained_model_dir: Path,
-        dataset_repo_id: str,
-        dataset_root: Path,
+        dataset_repo_id: str | None = None,
+        dataset_root: Path | None = None,
         device: str | None = None,
         task: str = "",
     ) -> None:
@@ -59,22 +64,36 @@ class LeRobotActBackend:
         from lerobot.policies.factory import make_policy, make_pre_post_processors
         from lerobot.utils.device_utils import get_safe_torch_device
 
-        self.pretrained_model_dir = Path(pretrained_model_dir).resolve()
+        self.pretrained_model_dir = resolve_pretrained_model_dir(str(pretrained_model_dir))
         if not self.pretrained_model_dir.is_dir():
             raise NotADirectoryError(str(self.pretrained_model_dir))
 
         self.device = get_safe_torch_device(device or "cuda", log=True)
+        from ai.train.processor_contract import check_processor_files, verify_processors
+        check_processor_files(self.pretrained_model_dir)
 
         policy_cfg = PreTrainedConfig.from_pretrained(str(self.pretrained_model_dir))
         policy_cfg.pretrained_path = str(self.pretrained_model_dir)
         policy_cfg.device = str(self.device)
 
-        ds_root = Path(dataset_root).resolve()
-        if not (ds_root / "meta" / "info.json").is_file():
-            raise FileNotFoundError(f"No meta/info.json under the LeRobot dataset root: {ds_root}")
-
-        ds_meta = LeRobotDatasetMetadata(repo_id=dataset_repo_id, root=ds_root)
-        self.policy = make_policy(cfg=policy_cfg, ds_meta=ds_meta)
+        if dataset_root is not None:
+            # Compatibility for older callers; new ACT bundles need no Dataset.
+            ds_root = Path(dataset_root).resolve()
+            if not (ds_root / "meta" / "info.json").is_file():
+                raise FileNotFoundError(f"No meta/info.json under the LeRobot dataset root: {ds_root}")
+            ds_meta = LeRobotDatasetMetadata(repo_id=dataset_repo_id, root=ds_root)
+            self.policy = make_policy(cfg=policy_cfg, ds_meta=ds_meta)
+            robot_type = ds_meta.robot_type
+        else:
+            from lerobot.policies.act.modeling_act import ACTPolicy
+            if policy_cfg.type != "act":
+                raise ValueError("Expected an ACT checkpoint")
+            # All normalizer state comes from the saved processors. No Dataset
+            # path lookup and no ImageNet download while reloading weights.
+            policy_cfg.pretrained_backbone_weights = None
+            self.policy = ACTPolicy.from_pretrained(str(self.pretrained_model_dir), config=policy_cfg)
+            self.policy.to(self.device)
+            robot_type = "indy7"
         self.policy.eval()
 
         preprocessor_overrides: dict[str, Any] = {
@@ -89,16 +108,32 @@ class LeRobotActBackend:
         self.policy.reset()
         self.preprocessor.reset()
         self.postprocessor.reset()
+        self.processor_verification = verify_processors(self.preprocessor, self.postprocessor)
 
         self.task = task
-        self.robot_type = ds_meta.robot_type or "pipet"
+        self.robot_type = robot_type or "indy7"
         self._torch = torch
+
+    def reset(self):
+        self.policy.reset()
+        self.preprocessor.reset()
+        self.postprocessor.reset()
+
+    def predict_chunk(self, observation: dict[str, np.ndarray]) -> np.ndarray:
+        """Full, unnormalized ACT chunk, without consuming select_action's queue."""
+        from lerobot.policies.utils import prepare_observation_for_inference
+        amp = bool(self.policy.config.use_amp) and self.device.type == "cuda"
+        with self._torch.inference_mode(), self._torch.autocast("cuda") if amp else nullcontext():
+            batch = prepare_observation_for_inference(dict(observation), self.device, self.task or None, self.robot_type)
+            actions = self.policy.predict_action_chunk(self.preprocessor(batch))
+            actions = self.postprocessor(actions)
+        return actions.detach().float().cpu().numpy()[0]
 
     def predict(self, observation: dict[str, np.ndarray]) -> np.ndarray:
         from lerobot.utils.control_utils import predict_action
 
         act = predict_action(
-            observation=observation,
+            observation=dict(observation),
             policy=self.policy,
             device=self.device,
             preprocessor=self.preprocessor,
