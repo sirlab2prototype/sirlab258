@@ -17,6 +17,11 @@ Canonical workspace: `/home/sirlab2/sirlab258`
 
 ## 1. Current Snapshot
 
+- **최신 Recorder UI/교정 수집:** 사용자 `ready`를 제거하고 `s`에서 기존 배치/Attempt 확정을 수행한다. `x`는 RECORDING 중 교정 전환이며 `o`가 Success/Correction에 저장한다. 과거 Failure와 version 1 receipt는 보존하고 새 실패 Episode는 만들지 않는다. 교정 입력 수신/처리 시각과 첫 대응 기록 프레임을 별도 저장하며 교정은 Core-108 완료에 포함하지 않는다. 자세한 동작·호환 한계는 [Recorder 가이드](../ai/record/COLLECTION.md). 기존 제어·Topic·QoS·시간 정합성 검사는 유지했고 실제 장비는 실행하지 않았다.
+
+- **2026-10-31 추가 확인 — 정식 수집 관리:** 기존 Recorder에 opt-in `--collection-dir` 기반 Core-108 조건/Attempt/실제 Episode 연결을 추가했다. 원본 Shuffle과 ID를 유지하며 각 Region × Yaw의 6 Depth 균형을 코드로 검증한다. 원자적 JSON 장부·fsync·파일 잠금·저장 의도/receipt 대조를 사용하고, 증거가 불완전한 부분 저장은 차단한다. 사용법은 [수집 관리](../ai/record/COLLECTION.md). 로봇·시리얼 접속 없이 합성 Dataset과 fake ROS로만 검증하며 기존 시간 정합성 코드는 변경하지 않는다. 아래 2026-10-09 장애·실물 제한의 해제 근거는 이번 작업에서 추가되지 않았다.
+- **Pilot 구분:** 사용자 지정 `outputs/act_recorder_pilot_20261031`은 정식 진행률에 포함하지 않고 변경·삭제하지 않는다. 정식 기본 예시는 `datasets/indy7_act_core108/{success,failure,pending}`이며 실제 성공 수집 완료를 의미하지 않는다.
+
 - **현재 phase:** Indy7 + Mark7 수동 teleop 기반의 ACT demonstration 수집 준비. J6 장애로 실물 작업 중단.
 - **Robot 사용:** Indy7 실제 motion/write/reset/calibration 금지. 복원된 control + ACT publisher 조합은 fault 이후 실물 재검증하지 않았다.
 - **핵심 blocker:** J6 DCP q/qdes 약 `-52678.1°`, EtherCAT actual/target position `969130066`; 완전 power cycle 후에도 지속.
@@ -162,6 +167,18 @@ Reference project는 `/home/sirlab2/minseo/capstone`(control 복원 비교 기�
 
 ## 10. Recent Changes
 
+**2026-10-31 — Recorder 한국어 UI / 교정 시연 수집**
+- 순차 출력 한국어 화면, `help/guide`, 현황과 요약 이력·세부 JSON 접근을 추가하고 정상 화면의 환경/상세 설정 로그를 제거했다.
+- 사용자 `ready` 없이 `s` 준비·검증, `x` 교정 전환·녹화 지속, `r` REVIEW, `o` 유형별 저장으로 정리했다. 일반 성공만 Core 완료로 집계한다.
+- Correction은 동일 저장 의도/fsync/파일·timing·receipt/SHA 검증과 reconcile을 사용한다. 과거 Failure 이력/파일/receipt 호환과 저장 실패 시 진행률 롤백을 검증했다. 학습 코드 변경은 없다.
+- 최종 오프라인 검증 **120 passed** (108개 전체 합성 정상 저장, Success/Correction 각각의 강제 프로세스 종료 복구 포함). bash 문법·Python 문법·공백 검사 및 기존 관측/영상/데이터 계약 함수 AST 대조 통과. 정상 코덱 상세 로그만 제한하고 경고·오류는 유지한다. 실제 장비·Pilot·기존 수집 파일을 사용하거나 수정하지 않았다.
+
+**2026-10-31 — Core-108 수집 관리 추가 (오프라인 구현)**
+- `ai/record/collection.py`, Recorder opt-in 통합, 수집 사용 가이드와 합성 저장/장애 복구 테스트를 추가했다.
+- 원본 조건표: 108 unique IDs/orders, Region별 36개, 18 Region × Yaw 각각 6 Depth가 하나씩이다. 조건표 문서는 수정하지 않았다.
+- 기존 성공/실패 저장 및 시간 정합성 경로를 재사용하며 Xbox/QP/Mark7 제어·QoS와 Pilot은 수정하지 않았다. 실제 장비 검증·전원 차단 실험은 수행하지 않았다.
+- 최종 검증: 수집 관리+기존 Recorder/PendingStart **98 passed** (108개 합성 성공 저장 포함), 기존 Mark7/QP/Xbox 입력 **20 passed**, 문법·공백 검사 통과. 강제 프로세스 종료 후 재실행 복구는 합성 데이터로 검증했으며 실제 PC 전원 차단 시험은 아니다.
+
 **2026-10-09 — Context 최초 작성 (이번 작업)**
 - 기존 코드·config·git 상태·저장 검증 결과 및 앞선 공식 복구 조사 내용을 통합. 정적/과거 실물 검증과 계획을 분리.
 - 검증: 필수 17개 section, local 문서 링크, source/config 변경 없음 확인. Test/build/로봇 실행 없음.
@@ -213,6 +230,10 @@ Raw 보존 경로: `/tmp/indy7_j6_readonly_diagnostic.txt`, `/tmp/indy_sdk_3_3_2
 - Zero getter의 빈/default 0, SDK3.4 `is_robot_connected=false`/`calibrated=false` 등은 실제 zero·연결 단절·미보정 증거로 단정하지 않음. 약 40.2는 position이 아니라 과거 temperature 정정값.
 
 ## 13. Pending Tasks
+
+**최신 Recorder 추가 확인:** 소프트웨어 검증과 실물 검증을 구분한다. SSH stdin 수신 시각은 키 누름/물리적 실패 시각이 아니다. 실제 입력·디스크 부하에서의 타이밍과 운영 흐름은 승인된 실물 조건에서 별도 확인해야 한다. 교정 전 구간까지 전체 Episode를 보존하며, 교정 마커를 이용한 학습/구간 처리·모델 변경은 이번 구현 범위 밖이다.
+
+**2026-10-31 추가:** 정식 수집 관리의 소프트웨어 경로를 구현했다. [사용 가이드](../ai/record/COLLECTION.md)의 장부 대조/복구 절차를 사용한다. 실제 feasible workspace·yaw와 좌표계 검증, 기존 장비 상태/운용 제한 확인, 승인된 실제 20FPS 수집 부하·시작 검증은 여전히 별도 필요하다. Mark7의 실제 초기 상태 조회 미확인을 임의 초기값으로 우회하지 않는다. 기존 2026-10-09 TODO는 해당 시점의 상태이며 이번 구현은 실물 제한을 해제하지 않는다.
 
 | 순위 / 상태 | 다음 작업 / 완료 조건 |
 |---|---|
