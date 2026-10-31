@@ -1,0 +1,10 @@
+{
+  "task_id": "indy7_basket_to_table1",
+  "home_source": "ros2_ws/src/capstone_teleop/config/indy7.yaml",
+  "home_tolerance_deg": 0.5,
+  "home_stable_ms": 250,
+  "home_timeout_seconds": 60,
+  "prepare_timeout_seconds": 5,
+  "max_act_seconds": 120,
+  "home_path_reviewed_for_real": false
+}

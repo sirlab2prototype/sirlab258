@@ -1,0 +1,80 @@
+{
+  "profile": "indy7_hardware_review_required",
+  "reviewed_for_real": false,
+  "review_record": "UNREVIEWED. Legacy QP ranges +/-175 deg (J6 +/-215), speed 45 deg/s are references only. Joint acceleration and task-space collision limits are not validated.",
+  "joint_min_rad": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "joint_max_rad": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "max_target_error_rad": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "max_step_rad": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "max_velocity_rad_s": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "max_acceleration_rad_s2": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "tracking_error_rad": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "tracking_timeout_ms": 150,
+  "joint_stale_ms": 100,
+  "status_stale_ms": 100,
+  "observation_stale_ms": 150,
+  "max_action_lateness_ms": 20,
+  "command_timeout_ms": 50,
+  "mode_timeout_ms": 5000,
+  "stop_timeout_ms": 1000,
+  "scheduler_watchdog_ms": 100,
+  "inference_watchdog_ms": 750,
+  "first_action_timeout_ms": 1500,
+  "stopped_velocity_rad_s": 0.01,
+  "gripper_open_threshold": 0.35,
+  "gripper_grasp_threshold": 0.65,
+  "gripper_output_min": -0.25,
+  "gripper_output_max": 1.25,
+  "gripper_dwell_ms": 100,
+  "gripper_min_interval_ms": 200,
+  "gripper_timeout_ms": 1000
+}
