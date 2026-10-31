@@ -1,5 +1,0 @@
-experiment: main
-condition: c
-visual_condition: rgb
-seed: 2
-dataset_dir: datasets/grip_c_s2

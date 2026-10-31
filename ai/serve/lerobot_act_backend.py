@@ -2,7 +2,6 @@
 # (heavy imports are deferred to __init__)
 from __future__ import annotations
 
-import json
 from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -35,16 +34,6 @@ def resolve_pretrained_model_dir(model_path: str) -> Path:
         f"Expected config.json under {p} or {sub} "
         f"(a LeRobot pretrained_model directory, or checkpoints/XXXXXX|last)."
     )
-
-
-def read_dataset_root_from_train_config(pretrained_dir: Path) -> str | None:
-    tc = pretrained_dir / "train_config.json"
-    if not tc.is_file():
-        return None
-    with open(tc, encoding="utf-8") as f:
-        data = json.load(f)
-    root = data.get("dataset", {}).get("root")
-    return str(root) if root else None
 
 
 class LeRobotActBackend:

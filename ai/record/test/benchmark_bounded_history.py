@@ -27,9 +27,12 @@ def main():
     if args.seconds <= 0:
         parser.error("--seconds must be positive")
     project = Path(__file__).resolve().parents[3]
-    for name in ("rclpy", "rclpy.node", "sensor_msgs", "sensor_msgs.msg", "std_msgs", "std_msgs.msg"):
+    for name in ("rclpy", "rclpy.node", "rclpy.qos", "sensor_msgs", "sensor_msgs.msg", "std_msgs", "std_msgs.msg"):
         sys.modules[name] = types.ModuleType(name)
     sys.modules["rclpy.node"].Node = object
+    sys.modules["rclpy.qos"].QoSProfile = types.SimpleNamespace
+    sys.modules["rclpy.qos"].ReliabilityPolicy = types.SimpleNamespace(RELIABLE="reliable")
+    sys.modules["rclpy.qos"].DurabilityPolicy = types.SimpleNamespace(TRANSIENT_LOCAL="transient_local")
     sys.modules["sensor_msgs.msg"].Image = object
     sys.modules["sensor_msgs.msg"].JointState = object
     sys.modules["std_msgs.msg"].Float32 = object
@@ -37,7 +40,9 @@ def main():
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    root = Path(tempfile.mkdtemp(prefix=".act-bounded-benchmark-", dir=project))
+    temporary_base = project / "tmp"
+    temporary_base.mkdir(exist_ok=True)
+    root = Path(tempfile.mkdtemp(prefix="act-bounded-benchmark-", dir=temporary_base))
     print("TEST_ROOT", root, flush=True)
     options = module.SyncOptions()
     history = module.BoundedHistory(options)
@@ -147,7 +152,7 @@ def main():
     finally:
         stop.set()
         thread.join()
-        if root.parent == project and root.name.startswith(".act-bounded-benchmark-"):
+        if root.parent == temporary_base and root.name.startswith("act-bounded-benchmark-"):
             shutil.rmtree(root)
             print("TEST_CLEANUP", not root.exists(), flush=True)
 

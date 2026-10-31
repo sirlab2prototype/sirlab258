@@ -10,12 +10,9 @@ import torch
 from torch.utils.data import DataLoader
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from ai import dataset_contract as contract
-from ai.serve.lerobot_act_backend import LeRobotActBackend, resolve_pretrained_model_dir
+from ai.serve.lerobot_act_backend import LeRobotActBackend
 from ai.train.checkpoint import assert_policy_contract
 from ai.train.pipeline_utils import write_json
-
-pretrained_dir = resolve_pretrained_model_dir
-
 
 def _empty():
     return {"joint_abs": np.zeros(6), "hold_joint_abs": np.zeros(6), "joint_samples": 0,
