@@ -11,7 +11,7 @@ import numpy as np
 import zmq
 
 from ai.serve.rgb_act_backend import RGBActBackend
-from ai.serve.zmq_act_server import PROTOCOL, decode
+from ai.serve.legacy_rgb_protocol import PROTOCOL, decode
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

@@ -7,7 +7,7 @@ import argparse
 
 import zmq
 
-from ai.serve.zmq_act_server import PROTOCOL
+from ai.serve.legacy_rgb_protocol import PROTOCOL
 
 
 def select_model(model_code: str, endpoint: str, timeout_ms: int = 15_000) -> dict:
