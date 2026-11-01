@@ -4,5 +4,4 @@ cameras:
   - serial: "844212071939"
     namespace: "camera_844212071939"
     parameters:
-      rgb_camera.exposure: 300
-      rgb_camera.gain: 64
+      rgb_camera.brightness: 20
