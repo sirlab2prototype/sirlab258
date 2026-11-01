@@ -117,13 +117,21 @@ def test_real_buttons_follow_existing_allowed_commands(window, state, correction
         assert app.fields["target_note"].get() == "저장 대상 · " + ("Correction" if correction else "Success")
 
 
+def settle(root, delay=100):
+    """Process real Configure/debounce callbacks without blocking the Tk loop."""
+    root.after(delay, root.quit)
+    root.mainloop()
+    root.update_idletasks()
+
+
 def test_real_layout_fits_small_and_large_windows_including_errors(window):
     root, bridge, app = window
     for width, height in ((960, 660), (1024, 700), (860, 600), (1600, 1000)):
         root.geometry(f"{width}x{height}+100+100")
+        settle(root)
         for state in ("READY", "REVIEW", "SAVING", "INVALID", "ERROR"):
             bridge.set_view(view_for(state)); app.refresh(schedule=False); root.update()
-            assert app.content.winfo_width() <= 1000
+            assert root.winfo_width()*.9 < app.content.winfo_width() < root.winfo_width()
             for widget in [*app.buttons.values(), app.status_label, app.condition_values[1]]:
                 x, y = widget.winfo_rootx()-root.winfo_rootx(), widget.winfo_rooty()-root.winfo_rooty()
                 assert x >= 0 and y >= 0
@@ -197,9 +205,9 @@ def test_placement_and_history_remain_available_in_popups(window):
 def test_app_fonts_use_pixels_and_real_typographic_hierarchy(window):
     root, _, app = window
     style = ttk.Style(root)
-    normal = root.tk.splitlist(style.lookup("Progress.TLabel", "font"))
-    placement = root.tk.splitlist(style.lookup("Placement.TLabel", "font"))
-    assert int(normal[1]) == -14 and int(placement[1]) == -20
+    assert style.lookup("Progress.TLabel", "font") == str(app.ui_scale.fonts["Progress"])
+    assert int(app.ui_scale.fonts["Progress"].cget("size")) == -14
+    assert int(app.ui_scale.fonts["Placement"].cget("size")) == -20
     assert app.status_label.cget("font") == ""  # No global *Font resource overrides ttk styles.
     assert app.condition_values[1].winfo_height() >= 24
 
@@ -208,6 +216,7 @@ def test_all_depth_labels_fit_without_clipping_even_with_invalid(window):
     from ai.record.collection import DEPTH_LABELS
     root, bridge, app = window
     root.geometry("860x640+100+100")
+    settle(root)
     for code, text in DEPTH_LABELS.items():
         view = view_for("INVALID")
         view["condition"]["depth"] = f"{text} ({code})"

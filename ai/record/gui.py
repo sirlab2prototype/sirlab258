@@ -10,6 +10,7 @@ from tkinter import font as tkfont, messagebox, scrolledtext, ttk
 
 from ai.record.gui_bridge import CAMERAS, RecorderBridge, run_engine
 from ai.record.gui_presentation import operator_fields, message_notice
+from ai.record.gui_scaling import UIScale, BASE_SIZE, RESIZE_DELAY_MS, window_scale
 
 STATE_LABELS = {"INITIALIZING": "시작·장부 확인 중", "READY": "녹화 대기",
                 "PRESTART": "시작 검사 중", "RECORDING": "녹화 중", "REVIEW": "저장 검토",
@@ -63,9 +64,13 @@ class RecorderWindow:
         self.dialogs, self._command_widgets = {}, []
         self._logs = deque(maxlen=200)
         self._notice_override, self._error_summary = None, ""
+        self._start_failure = ""
         self._pending_notice = ""
         self._last_state = None
         self._reply_widget = self._details_log = None
+        self._resize_job = None
+        self._pending_size = self._last_size = BASE_SIZE
+        self._popup_bases = {}
         root.title("ACT Recorder · Core-108")
         root.geometry("960x660")
         root.minsize(860, 640)
@@ -80,8 +85,8 @@ class RecorderWindow:
         self.shell.pack(fill="both", expand=True)
         self.content = ttk.Frame(self.shell, style="Page.TFrame")
         self.content.columnconfigure(0, weight=1)
-        self.content.rowconfigure(4, weight=1)
-        self.shell.bind("<Configure>", self._fit_content)
+        # Menus follow the recording area; spare height stays below the UI.
+        self.content.rowconfigure(9, weight=0)
 
         header = ttk.Frame(self.content, style="Page.TFrame")
         header.grid(row=0, column=0, sticky="ew")
@@ -141,10 +146,12 @@ class RecorderWindow:
         self.error_label = ttk.Label(self.error_card, textvariable=self.error_text, style="Error.TLabel", wraplength=650)
         self.error_label.grid(row=0, column=0, sticky="w")
         ttk.Button(self.error_card, text="오류 상세", style="Small.TButton", command=self.show_details).grid(row=0, column=1, padx=(12, 0))
+        self.ui_scale.capture(self.error_card)
         self.error_card.grid_remove()
 
+        self.content.rowconfigure(6, weight=1)
         tools = ttk.Frame(self.content, style="Page.TFrame")
-        tools.grid(row=6, column=0, sticky="ew", pady=(10, 10))
+        tools.grid(row=7, column=0, sticky="ew", pady=(10, 10))
         for verb, text, callback in (("condition", "조건 선택", self.show_condition), ("progress", "수집 현황", self.show_progress),
                                      ("history", "이력 확인", self.show_history), (None, "상세 정보", self.show_details),
                                      ("placement", "배치·메모", self.show_placement)):
@@ -154,11 +161,15 @@ class RecorderWindow:
                 # The dialog can still show frozen placement/result annotations in REVIEW.
                 self._command_widgets.append((button, ("placement", "result") if verb == "placement" else (verb,)))
         ttk.Button(tools, text="종료", style="Small.TButton", command=self.close).pack(side="right")
-        ttk.Separator(self.content).grid(row=7, column=0, sticky="ew")
+        ttk.Separator(self.content).grid(row=8, column=0, sticky="ew")
         ttk.Label(self.content, textvariable=self.notices, style="Footer.TLabel", width=1,
-                  anchor="w").grid(row=8, column=0, sticky="ew", pady=(10, 0))
+                  anchor="w").grid(row=9, column=0, sticky="ew", pady=(10, 0))
         for command in "sxrod":
             root.bind(f"<KeyPress-{command}>", lambda event, c=command: self.shortcut(event, c))
+        self.ui_scale.capture(self.shell)
+        self._layout_size(*BASE_SIZE)
+        root.bind("<Configure>", self._on_configure, add="+")
+        root.bind("<Destroy>", self._on_destroy, add="+")
         self.refresh()
 
     def _configure_styles(self):
@@ -166,7 +177,8 @@ class RecorderWindow:
         self.font_family = next((f for f in ("Noto Sans CJK KR", "맑은 고딕", "NanumGothic", "Malgun Gothic") if f in families),
                                 tkfont.nametofont("TkDefaultFont").actual("family"))
         # Negative sizes are physical pixels: do not multiply 13pt by a desktop's 2x Tk scaling.
-        self.body_font = (self.font_family, -14)
+        self.ui_scale = UIScale(self.root, self.font_family)
+        self.body_font = self.ui_scale.font("Body", 14)
         # An option-database '*Font' would override every ttk style, including
         # placement/status headings. Configure app-local named defaults instead.
         for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont"):
@@ -183,29 +195,62 @@ class RecorderWindow:
                 ("Indicator", 18, "#64748b", "normal"), ("Clock", 30, "#17223b", "normal"),
                 ("Target", 13, "#2454cc", "bold"), ("Hint", 12, "#526179", "normal"),
                 ("Footer", 13, "#526179", "normal")):
-            style.configure(name+".TLabel", font=(self.font_family, -size, weight), foreground=color,
+            style.configure(name+".TLabel", font=self.ui_scale.font(name, size, weight), foreground=color,
                             background="#f3f5f8" if name in ("Brand", "Progress", "Footer") else "#ffffff")
-        style.configure("Action.TButton", font=(self.font_family, -15, "bold"), padding=(8, 11),
+        style.configure("Action.TButton", font=self.ui_scale.font("Action", 15, "bold"), padding=(8, 11),
                         background="#f0f3f8", foreground="#17223b", borderwidth=0, relief="flat", focusthickness=2)
         style.map("Action.TButton", background=[("disabled", "#eef1f5"), ("active", "#e0e6ef")],
                   foreground=[("disabled", "#7a8799")])
         style.configure("Primary.Action.TButton", background="#2454cc", foreground="#ffffff")
         style.map("Primary.Action.TButton", background=[("disabled", "#eef1f5"), ("active", "#1d43a5")],
                   foreground=[("disabled", "#7a8799"), ("!disabled", "#ffffff")])
-        style.configure("Small.TButton", padding=(10, 7), font=(self.font_family, -13),
+        style.configure("Small.TButton", padding=(10, 7), font=self.ui_scale.font("Small", 13),
                         background="#e7ecf3", borderwidth=0, relief="flat")
         style.map("Small.TButton", background=[("active", "#dbe3ee")], foreground=[("disabled", "#7a8799")])
         style.configure("Error.TFrame", background="#fef0ef")
-        style.configure("Error.TLabel", background="#fef0ef", foreground="#b4232c", font=(self.font_family, -13))
+        style.configure("Error.TLabel", background="#fef0ef", foreground="#b4232c", font=self.ui_scale.font("Error", 13))
         style.configure("Collection.Horizontal.TProgressbar", troughcolor="#dfe5ee", background="#2454cc",
                         borderwidth=0, thickness=3)
 
-    def _fit_content(self, event):
-        width = min(1000, max(0, event.width-40))
-        self.content.place(x=(event.width-width)//2, y=20, width=width, height=max(0, event.height-40))
+    def _on_configure(self, event):
+        if event.widget is not self.root or event.width < 2 or event.height < 2:
+            return
+        self._pending_size = (event.width, event.height)
+        if self._resize_job is None and self._pending_size != self._last_size:
+            # Coalesced debounce: latest size at most every 40ms, including during dragging.
+            self._resize_job = self.root.after(RESIZE_DELAY_MS, self._apply_pending_size)
+
+    def _apply_pending_size(self):
+        self._resize_job = None
+        self._layout_size(*self._pending_size)
+
+    def _on_destroy(self, event):
+        if event.widget is self.root and self._resize_job is not None:
+            self.root.after_cancel(self._resize_job)
+            self._resize_job = None
+
+    def _layout_size(self, window_width, window_height):
+        self._last_size = (window_width, window_height)
+        self.ui_scale.apply(window_scale(window_width, window_height))
+        px = self.ui_scale.px
+        margin = px(20)
+        width = max(1, window_width-2*margin)
+        self.content.place(x=margin, y=margin, width=width, height=max(1, window_height-2*margin))
         for label in self.condition_values:
-            label.configure(wraplength=max(140, (width-44)//3-15))
-        self.error_label.configure(wraplength=max(250, width-170))
+            label.configure(wraplength=max(px(140), (width-px(44))//3-px(15)))
+        self.error_label.configure(wraplength=max(px(250), width-px(170)))
+        for window, base in list(self._popup_bases.items()):
+            if not window.winfo_exists():
+                del self._popup_bases[window]
+                continue
+            window.minsize(px(550), px(350))
+            window.geometry(f"{min(px(base[0]), max(px(550), window_width-2*margin))}x"
+                            f"{min(px(base[1]), max(px(350), window_height-2*margin))}")
+
+    def _scale_new_dialog(self, window):
+        if window.winfo_exists():
+            self.ui_scale.capture(window)
+            self._layout_size(*self._last_size)
 
     def label(self, parent, key, **kwargs):
         if key not in self.fields:
@@ -224,6 +269,8 @@ class RecorderWindow:
         window.transient(self.root)
         window.configure(background="#ffffff")
         self.dialogs[key] = window
+        self._popup_bases[window] = tuple(int(n) for n in size.split("x"))
+        self.root.after_idle(lambda: self._scale_new_dialog(window))
         return window, True
 
     def _text(self, parent, **kwargs):
@@ -340,8 +387,13 @@ class RecorderWindow:
             return
         if verb == "d" and not messagebox.askyesno("시연 폐기", "현재 미저장 시도를 폐기합니까?", parent=self.root):
             return
-        if not self.bridge.submit(command):
+        submitted = self.bridge.submit(command)
+        if not submitted:
             self.notices.set("상태가 바뀌었거나 명령 처리 중입니다. 현재 상태를 확인하세요.")
+        elif verb == "s":
+            self._start_failure = ""
+            self._error_summary = ""
+            self._notice_override = None
         # Disable immediately; do not wait for the next Tk poll/double click.
         self.refresh(schedule=False)
 
@@ -366,6 +418,8 @@ class RecorderWindow:
             if notice:
                 self._notice_override, error = notice
                 self._error_summary = self._notice_override if error else ""
+                if error and str(message).startswith(("[시작 검사] 취소:", "[시작 검사] 실패:")):
+                    self._start_failure = self._notice_override
                 if str(message).startswith(("[미저장 시연]", "[복구 기록]")) or "[정리 경고]" in str(message):
                     self._pending_notice = self._notice_override
         if messages:
@@ -385,23 +439,31 @@ class RecorderWindow:
         condition = self.view.get("condition")
         values["identity"] = (f"순서 {condition['collection_order']:03d} / 108   ·   조건 {condition['condition_id']:03d}   ·   {condition['attempt_number']}회차"
                               if condition else "정상 108개 수집 완료" if (self.view.get("stats") or {}).get("success") == 108 else "조건 확인 중")
+        start_failed = bool(self._start_failure) and self.view["state"] == "READY"
+        if start_failed:
+            values["state"] = "녹화 시작 실패 · 재시도 가능"
         for key, value in values.items():
             if key not in self.fields:
                 self.fields[key] = tk.StringVar()
             self.fields[key].set(value)
         self.progress_value.set((self.view.get("stats") or {}).get("success", 0))
-        self.indicator.configure(foreground=operator["state_color"])
-        self.status_label.configure(foreground=operator["state_color"])
+        status_color = "#b4232c" if start_failed else operator["state_color"]
+        self.indicator.configure(foreground=status_color)
+        self.status_label.configure(foreground=status_color)
         self.mode_label.configure(foreground="#6442a3" if operator["mode"].startswith("교정") else "#526179")
-        self.notices.set(self._notice_override or operator["default_notice"])
+        self.notices.set(self._start_failure if start_failed else self._notice_override or operator["default_notice"])
         alert = operator["alert"] if self.view["state"] == "INVALID" else self._error_summary or operator["alert"] or self._pending_notice
+        if start_failed:
+            alert = self._start_failure
         if alert:
             pending_note = "Pending 보존 · 오류 상세에서 경로를 확인하세요." if self.view.get("pending") else "오류 상세에서 원문과 복구 안내를 확인하세요."
             # Keep the main alert to two lines even for a long parser exception.
             # Full error text/paths remain untouched in the diagnostics dialog.
             summary = alert if len(alert) <= 44 else alert[:43] + "…"
             self.error_text.set(summary + "\n" + pending_note)
-            self.error_card.grid()
+            if not self.error_card.winfo_manager():
+                self.error_card.grid()
+                self._layout_size(*self._last_size)
         else:
             self.error_card.grid_remove()
         primary = {"READY": "s", "RECORDING": "r", "PRESTART": "r", "REVIEW": "o"}.get(self.view["state"])
