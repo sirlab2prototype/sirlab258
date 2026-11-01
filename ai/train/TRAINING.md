@@ -4,14 +4,12 @@ Only an explicit training invocation starts optimization. No setup or robot
 launch is added. From the repository root:
 
 ```bash
-./act train
+act train
 # Equivalent backward-compatible entry point:
-./act-train
+act train
 ```
 
-No external PATH, shell aliases, shared environments or official sources are
-changed. There was no existing `act` command in the inspected shell. The local
-file is invoked as `./act`, so unrelated PATH commands remain unaffected.
+The user-local `act` launcher selects the project ACT environment. Shared environments and official sources are unchanged.
 
 Defaults: successful `datasets/indy7_act`, identity `local/indy7_act`, a new
 `outputs/act_<UTC-time>-<random-id>` run, 100000 steps, batch 64, LR 1e-4,
@@ -26,9 +24,9 @@ root. The default `datasets/indy7_act` is the independent Recorder path and is
 not an alias for Core-108. Keep the original repo id (default `local/indy7_act`):
 
 ```bash
-./act validate --dataset-dir datasets/indy7_act_core108/success \
+act validate --dataset-dir datasets/indy7_act_core108/success \
   --dataset-repo-id local/indy7_act --report outputs/core108_validation.json
-./act train --dataset-dir datasets/indy7_act_core108/success \
+act train --dataset-dir datasets/indy7_act_core108/success \
   --dataset-repo-id local/indy7_act --output-dir outputs/core108_plan \
   --device cpu --no-use-amp --dry-run
 ```
@@ -41,16 +39,16 @@ training with the intended device/steps. Correction/Failure outcomes are rejecte
 by this success-only preflight; correction-aware training is not implemented.
 
 ```bash
-./act train --dataset-dir datasets/indy7_act --output-dir outputs/my_act_run \
+act train --dataset-dir datasets/indy7_act --output-dir outputs/my_act_run \
   --steps 100000 --batch-size 32 --learning-rate 0.0001 --seed 42 \
   --chunk-size 40 --n-action-steps 10 --save-freq 20000 \
   --validation-fraction 0.2 --no-ram-cache
 
 # Full preflight and recorded plan, without optimization:
-./act train --dry-run
+act train --dry-run
 
 # Deliberate small CPU functional run (use test data for software smoke tests):
-./act train --device cpu --no-use-amp --dev-small --steps 2 \
+act train --device cpu --no-use-amp --dev-small --steps 2 \
   --batch-size 1 --num-workers 0 --chunk-size 2 --n-action-steps 1 --save-freq 1
 ```
 
@@ -139,9 +137,9 @@ they require retraining or explicit review before use. See
 
 ```bash
 # Last available checkpoint of a prior pipeline run:
-./act train --resume outputs/prior_run --steps 100000
+act train --resume outputs/prior_run --steps 100000
 # Or a particular checkpoint:
-./act train --resume outputs/prior_run/training/checkpoints/020000 --steps 100000
+act train --resume outputs/prior_run/training/checkpoints/020000 --steps 100000
 ```
 
 The Dataset identity/content hash, split, model/optimizer settings and saved
@@ -201,7 +199,7 @@ backend.reset()
 and a float32 state vector of length 7. Inputs are not mutated by these methods.
 Use only one action-consumption strategy per session. The current
 `RGBActBackend` extends `LeRobotActBackend` with two-camera/7D contract checks,
-and `./act infer` uses `zmq_act_server.py` with `indy7_act_rgb2_v2`.
+and `act infer` uses `zmq_act_server.py` with `indy7_act_rgb2_v2`.
 The incompatible single-camera/10D pool, selector and legacy wire helper were
 removed. Their exact sources are preserved in commit `78794cf`; they are not a
 supported Indy7 inference path. The active server/protocol above is unchanged.

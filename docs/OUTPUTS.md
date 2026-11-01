@@ -22,12 +22,12 @@ Correction 1개이며 조건 정의108개와 실제 수집 완료 개수는 다�
 
 ## 새 정식 Collection 생성과 재개
 
-새 데이터셋은 `ai/record/plans/<dataset_id>.json`으로 정의한다. [사용 설명서](../act-record.md)를 따른다.
-`./act-record`는 선택 화면을 열고, 최초 열기에서 Collection을 생성한다. 아래는 생성한 Collection의 CLI 재개 예시다.
+새 데이터셋은 `ai/record/plans/<dataset_id>.json`으로 정의한다. [사용 설명서](.act record.md)를 따른다.
+`act record`는 선택 화면을 열고, 최초 열기에서 Collection을 생성한다. 아래는 생성한 Collection의 CLI 재개 예시다.
 장비 운영은 별도 승인 후 수행한다.
 
 ```bash
-./act-record --collection-dir outputs/preserved/datasets/act1_108_001
+act record --collection-dir outputs/preserved/datasets/act1_108_001
 ```
 
 최초에는 선택 화면에서 정의 JSON을 기준으로 새 장부를 만든다. 나중에는 같은 경로로

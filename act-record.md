@@ -101,7 +101,7 @@ Core-55 조건표는 제공하지 않는다. 실제55개 조건을 정의한 경
 프로젝트 루트에서 실행한다.
 
 ```bash
-./act-record
+act record
 ```
 
 또는 ACT 환경에서 `python -m ai.record.gui`를 사용한다.
@@ -160,7 +160,7 @@ JSON이 저장 스냅샷과 달라지면 GUI는 오류를 표시하며 기존 �
 기존 직접 실행도 유지한다. 이 경로는 저장된 Collection을 사용하며 JSON 편집을 적용하지 않는다.
 
 ```bash
-./act-record --collection-dir outputs/act_gui_integration_test
+act record --collection-dir outputs/act_gui_integration_test
 python -m ai.record.gui --collection-dir outputs/act_gui_integration_test
 ```
 

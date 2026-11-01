@@ -53,7 +53,7 @@
 
 ## Indy7 ACT 파일 기반 Dataset 선택 (2026-11-01)
 
-- 경로 없는 `./act-record`와 `python -m ai.record.gui`는 데이터셋 선택 GUI를 연다.
+- 경로 없는 `act record`와 `python -m ai.record.gui`는 데이터셋 선택 GUI를 연다.
   GUI는 목록 새로고침·선택한 데이터셋 열기만 제공한다. 행동 등록·계획 가져오기·ID 입력·조합/생성 폼은 제거했다.
 - 정의 원본은 `ai/record/plans/<dataset_id>.json`이다. 파일 하나에 행동·계획·실제 조건 전체를 담으며
   실행/새로고침으로 자동 인식한다. 코드 수정·등록 명령·커밋·ROS 재빌드는 필요 없다.
@@ -87,6 +87,48 @@
 - 기존 outputs412파일과 링크2개의 경로·내용은 전후 동일하며 관련 없는 이전 소스도 보존했다.
   근거: `tmp/gui_resize_kbuhnqi4/{verification.json,final.xml,final.log}`.
   실제 Indy7·ROS 노드·카메라·ACT 학습/추론 및 Git 커밋은 실행하지 않았다.
+
+## 정식 실행 CLI (2026-11-01)
+
+- 기본 명령은 `indy`, `omy`, `act`이며 D435 전용 `camera`, `cam1`, `cam2`를 추가했다. 구현은 `scripts/bin`에 있고
+  `scripts/install_commands.sh`가 `~/.local/bin`에 연결한다. 재연결은 `--replace`로 symlink만 교체한다.
+- `indy [driver|teleop]`은 카메라 없이 기존 ROS 제어 launch·인자를 유지한다. `indy cam`은 제거했다. 실제 제어·자동 ARM 제한은 동일하다.
+- `act record`는 기존 GUI/터미널 Recorder 분기를 유지한다. 나머지 train/validate/infer/execute/task/evaluate와
+  학습 환경·실제 실행 잠금·Mock 계약은 유지한다. `act`만 입력하면 도움말이다.
+- `omy`는 공용 `/opt/workspace/omy` 사전 점검/status/doctor/logs만 제공한다.
+  공유 컨테이너·로봇 프로세스 시작/정지/재시작 및 Leader/Follower 자동 구동은 제공하지 않는다.
+- 중복 루트 실행 래퍼4개는 제거했다. `act-record.md` 등 문서는 유지했다.
+  `scripts/bin`의 기존 cap* 및 act-record는 내부 호환 경로로 남기되 사용자 명령으로 설치하지 않는다.
+  과거 실험/장애 문서의 옛 명령은 이력으로 유지하며 현재 명령 안내는 README를 따른다.
+- 계정 `.bash_aliases`는 백업 후 indy/omy 함수만 제거하고 재로딩 시 기존 함수 캐시를 해제한다.
+  `.bashrc`·개인 alias·공용 OMY 파일·기존 환경과 장비 코드는 변경하지 않았다.
+- CLI 가짜 분기·경로/링크/인자/설치 충돌 및 메타데이터 평가 **82 passed, 0 failed**.
+  설치된 세 명령의 실제 --help와 함수 우선순위도 확인했다. 실제 장비·카메라·ROS·수집·학습·추론은 실행하지 않았다.
+  근거: `tmp/cli_cleanup_6hxymi06/{verification.json,final.xml,final.log}`.
+- 현재 bootstrap의 requirements 파일 누락 문제는 별개로 남아 있다. CLI 설치는 bootstrap·의존성 재설치 없이 수행했다.
+
+## D435 독립 CLI (2026-11-01)
+
+- `camera`는 D435317222074298+844212071939, `cam1`은844212071939, `cam2`는317222074298을 실행한다.
+  CLI 번호만 교체했으며 namespace/토픽/ACT 설정과 serial별 잠금은 그대로 유지한다.
+  번호 교체 후 CLI/잠금/가짜 launch 회귀32개를 통과했다. 근거: `tmp/camera_mapping_bk6tyhg1/verification.json`.
+  `scripts/install_commands.sh`가 사용자 `~/.local/bin`에6개 명령을 연결한다. D405 명령은 추가하지 않았다.
+- Indy setup의 카메라 포함을 제거했다. Driver/Mark7/Xbox/QP/GUI와 기존 인자는 유지한다.
+  `show_camera`는 setup의 호환 인자일 뿐이다. 카메라 명령에서는 미리보기만 제어한다.
+  내부 caps도 새 indy에 위임한다. 소스 launch/YAML을 직접 지정하므로 이번 변경에 ROS 재빌드는 필요 없다.
+- serial별 flock을 `~/.local/bin/.sirlab258-camera-locks`에서 같은 계정·다른 clone 간 공유한다.
+  묶음 실행은 하나라도 잠겨 있으면 전체 거절한다. 이미 실행 중인 프로세스를 종료/재시작하지 않는다.
+  lock 파일은 지우지 않으며 종료 시 FD 잠금이 해제된다. 외부/다른 계정·직접 ros2/SDK 점유는 알 수 없다.
+  강제 비정상 종료로 자식이 남는 경우까지 장치 소유권을 보증하지 않는다.
+- 기존 RGB namespace/토픽·YAML·ACT 두 영상/640×480/20FPS 계약은 유지했다.
+  OMY·D405·공용 환경·VLA/브리지 구현은 변경하지 않았다.
+- 최종 가짜 launch/노드·잠금 경합·독립 종료/재시작·CLI 회귀·Recorder GUI 테스트:
+  **62 passed, 0 failed, 0 skipped** (2.96초). 실제 카메라 명령은 --help만 실행했다.
+  설치된 ROS CLI 소스로 절대 launch 파일 인자 형식을 확인했다. 실제 영상 발행·ROS 종료 시
+  장치 반환·외부 점유 오류는 별도 실물 검증이 필요하다.
+- 기존 미커밋 ACT/OMY/제어/수집 자료 해시는 유지됐다.
+  근거: `tmp/camera_cli_66g5gpfc/{verification.json,release.xml,release.log}`.
+  실제 장비·카메라 스트리밍·ROS·학습·추론 실행 및 Git 커밋은 하지 않았다.
 
 ## 수집에서 평가까지
 
@@ -137,7 +179,7 @@ CPU 전체 회귀 결과와 복구 커밋은 [정리 기록](PROJECT_CLEANUP_AUD
 - teleop/move/Home/Zero/Recover/calibration, encoder·offset·multi-turn reset, Servo/brake/SDO/PDO write를 임의 실행하지 않는다.
   `reset_servo`, `reset_overflow_count`, `set_robot_zero_as_current`, `set_servo`/`set_servo_rx`,
   `set_brake`와 brake release/수동 강제 이동도 안전한 조회·복구로 취급하지 않는다.
-- `caps/capi/capx`와 Driver 시작/종료는 관측 전용이 아니다. 기존 장비 노드·시리얼을 임의 종료하지 않는다.
+- `indy`/`indy driver`/`indy teleop`와 Driver 시작/종료는 관측 전용이 아니다. 기존 장비 노드·시리얼을 임의 종료하지 않는다.
 - 실제 getter·ROS 구독도 목적과 API를 설명하고 현재 사용자 승인 범위에서만 수행한다.
 - Gripper 무명령 실제 초기 상태 조회는 명세·펌웨어 근거 미확인이다. 임의0/1이나 Open/Grasp로 우회하지 않는다.
   QP/Recorder는 RELIABLE/TRANSIENT_LOCAL/depth1, 추론 RosSource는 RELIABLE/VOLATILE/depth10이다.

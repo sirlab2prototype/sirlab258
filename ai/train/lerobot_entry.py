@@ -10,7 +10,7 @@ from ai import dataset_contract as contract
 def main():
     stats_root = os.environ.get("INDY7_ACT_TRAIN_STATS")
     if not stats_root:
-        raise ValueError("Use ./act train: verified Train-only statistics are required")
+        raise ValueError("Use act train: verified Train-only statistics are required")
     original = lerobot_train.make_dataset
 
     def make_training_dataset(cfg):

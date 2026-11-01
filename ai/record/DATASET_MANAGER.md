@@ -1,6 +1,6 @@
 # Indy7 ACT 데이터셋 선택 화면
 
-현재 사용법과 JSON 전체 스키마는 프로젝트 최상위 [act-record.md](../../act-record.md)가 기준이다.
+현재 사용법과 JSON 전체 스키마는 프로젝트 최상위 [act-record.md](../.act record.md)가 기준이다.
 
 - `ai/record/plans/<dataset_id>.json` 한 파일로 행동·계획·조건을 정의한다.
 - 실행 또는 목록 새로고침으로 자동 인식한다. 별도 등록·코드 수정·커밋·ROS 재빌드는 필요 없다.

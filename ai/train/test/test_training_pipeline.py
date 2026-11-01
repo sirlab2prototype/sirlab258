@@ -199,14 +199,14 @@ def test_entire_video_is_checked(dataset, fault):
 
 def test_cli_dispatch_and_dry_run(real_base, tmp_path):
     import subprocess
-    help_result = subprocess.run(["./act", "--help"], capture_output=True, text=True, check=True)
+    help_result = subprocess.run(["./scripts/bin/act", "--help"], capture_output=True, text=True, check=True)
     assert "train|validate" in help_result.stdout
-    result = subprocess.run(["./act", "train", *arguments(real_base, tmp_path / "planned"), "--dry-run"],
+    result = subprocess.run(["./scripts/bin/act", "train", *arguments(real_base, tmp_path / "planned"), "--dry-run"],
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
     manifest = json.loads((tmp_path / "planned/run.json").read_text())
     assert manifest["status"] == "planned" and not (tmp_path / "planned/training").exists()
-    unknown = subprocess.run(["./act", "setup"], capture_output=True, text=True)
+    unknown = subprocess.run(["./scripts/bin/act", "setup"], capture_output=True, text=True)
     assert unknown.returncode == 2
 
 

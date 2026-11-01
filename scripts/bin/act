@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -eo pipefail
+ROOT="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../.." && pwd)"
+case "${1:-}" in
+  help|-h|--help|'') echo 'Usage: act {record|train|validate|infer|execute|task|evaluate} [options]'; exit 0 ;;
+  record) shift; exec "$ROOT/scripts/bin/act-record" "$@" ;;
+  train) module=ai.train.run_train; export HF_HOME="${HF_HOME:-$ROOT/.hf_cache}" ;;
+  validate) module=ai.train.validate_dataset ;;
+  infer) module=ai.serve.infer ;;
+  execute) module=ai.execute.main ;;
+  task) module=ai.execute.task_main ;;
+  evaluate) module=ai.evaluate.main ;;
+  *) echo "Unknown ACT command: $1; use act --help" >&2; exit 2 ;;
+esac
+shift
+export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+exec "$ROOT/.venv-act/bin/python" -m "$module" "$@"

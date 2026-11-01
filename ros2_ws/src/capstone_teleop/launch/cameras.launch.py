@@ -16,6 +16,7 @@ from launch_ros.substitutions import FindPackageShare
 
 _ROS_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 _REALSENSE_SERIAL = re.compile(r"^[0-9]+$")
+_CAMERA_SERIALS = {"cam1": "844212071939", "cam2": "317222074298"}
 
 
 def _camera_nodes(context):
@@ -25,6 +26,10 @@ def _camera_nodes(context):
     with registry_path.open(encoding="utf-8") as stream:
         registry = yaml.safe_load(stream) or {}
 
+    selection = LaunchConfiguration("camera_selection").perform(context)
+    if selection not in ("all", "cam1", "cam2"):
+        raise ValueError("camera_selection must be all, cam1 or cam2")
+    requested = set(_CAMERA_SERIALS.values()) if selection == "all" else {_CAMERA_SERIALS[selection]}
     cameras = registry.get("cameras")
     if not isinstance(cameras, list) or not cameras:
         raise ValueError(f"{registry_path}: 'cameras' must be a non-empty list")
@@ -50,6 +55,11 @@ def _camera_nodes(context):
         serials.add(serial)
         namespaces.add(namespace)
 
+        if serial not in requested:
+            continue
+        expected_namespace = f"camera_{serial}"
+        if namespace != expected_namespace:
+            raise ValueError(f"Camera {serial} must retain namespace {expected_namespace}")
         topic = f"/{namespace}/camera/color/image_raw"
         actions.extend([
             LogInfo(msg=f"Starting RGB camera serial={serial} topic={topic}"),
@@ -70,6 +80,8 @@ def _camera_nodes(context):
                 remappings=[("image", topic)],
             ),
         ])
+    if not requested.issubset(serials):
+        raise ValueError(f"Selected camera serial missing from registry: {sorted(requested - serials)}")
     return actions
 
 
@@ -87,5 +99,6 @@ def generate_launch_description():
             default_value=PathJoinSubstitution([config_dir, "camera_rgb_only.yaml"]),
         ),
         DeclareLaunchArgument("show_camera", default_value="true"),
+        DeclareLaunchArgument("camera_selection", default_value="all", choices=["all", "cam1", "cam2"]),
         OpaqueFunction(function=_camera_nodes),
     ])

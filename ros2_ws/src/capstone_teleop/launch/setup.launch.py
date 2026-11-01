@@ -24,7 +24,6 @@ def include_launch(name, arguments):
 def generate_launch_description():
     indy_ip = LaunchConfiguration('indy_ip')
     mark7_device = LaunchConfiguration('mark7_device')
-    show_camera = LaunchConfiguration('show_camera')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -42,12 +41,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'show_camera',
             default_value='true',
-            description='Open one preview window for each RGB camera',
-        ),
-
-        include_launch(
-            'cameras.launch.py',
-            {'show_camera': show_camera},
+            description='Compatibility argument only; start cameras separately with camera/cam1/cam2',
         ),
 
         include_launch(

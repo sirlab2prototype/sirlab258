@@ -121,11 +121,11 @@ echo "Bootstrap complete."
 echo
 echo "Use:"
 echo "  cd \"$ROOT\""
-echo "  source .venv/bin/activate"
+echo '  export PATH="$HOME/.local/bin:$PATH"'
 echo
 echo "Commands:"
-echo "  capi   Indy7"
-echo "  capg   Mark7 gripper"
-echo "  capx   Xbox + QP teleop"
-echo "  caps   Full manual teleop setup"
+echo "  indy   Indy7 manual stack"
+echo "  omy    Shared OMY preflight only"
+echo "  act    ACT commands"
+echo "  camera D435 pair (cam1 / cam2 for individual cameras)"
 echo "========================================"

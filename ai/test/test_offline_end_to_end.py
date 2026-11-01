@@ -118,7 +118,7 @@ class Pipeline:
     def train(self, device):
         if device in self.trained: return self.trained[device]
         output=self.root/('train_'+device)
-        self.command('train_'+device,['./act','train','--dataset-dir',self.dataset,'--output-dir',output,
+        self.command('train_'+device,['./scripts/bin/act','train','--dataset-dir',self.dataset,'--output-dir',output,
             '--steps','3','--batch-size','2','--num-workers','0','--chunk-size','12','--n-action-steps','4',
             '--device',device,'--no-use-amp','--dev-small','--save-freq','3','--log-freq','1','--lr','.001','--seed','0'])
         manifest=json.loads((output/'run.json').read_text())
@@ -143,7 +143,7 @@ class Pipeline:
         manifest=self.train(device);checkpoint=manifest['checkpoint']
         for command in ('infer','execute','task'):
             output=self.root/(command+'_'+device)
-            args=['./act',command,'--checkpoint',checkpoint,'--device',device,'--output-dir',output,'--duration','3']
+            args=['./scripts/bin/act',command,'--checkpoint',checkpoint,'--device',device,'--output-dir',output,'--duration','3']
             if command=='infer':args+=['--source','synthetic','--dry-run']
             elif command=='execute':args+=['--mode','mock','--approve-mock','explicit-offline-integration-test',
                                          '--mock-initial-joints',*map(str,TaskConfig.load(ROOT/'ai/execute/config/task1.json').home_rad)]
@@ -161,7 +161,7 @@ class Pipeline:
         if repeat_task:
             first=self.tasks[-1]
             output=self.root/'task_cpu_repeat'
-            self.command('task_cpu_repeat',['./act','task','--task',TASK_NAME,'--mode','mock','--checkpoint',checkpoint,
+            self.command('task_cpu_repeat',['./scripts/bin/act','task','--task',TASK_NAME,'--mode','mock','--checkpoint',checkpoint,
                  '--approve-mock','repeat-approved','--approve-home-mock','--confirm-home-path-mock','software fixture only',
                  '--mock-complete-after-actions','25','--duration','3','--device',device,'--output-dir',output])
             result=json.loads((output/'result.json').read_text())
@@ -236,7 +236,7 @@ def pipeline(tmp_path_factory):
              'gripper_values':[0],'joint_action':'absolute Home radians; constant safe hold','maximum_history_rgb_bytes':maximum_history_bytes,
              'manual_sidecar_generation_or_copy':False,'physical_demonstrations':False,'dataset_fingerprint':instance.dataset_identity})
     finally:patch.undo()
-    instance.command('validate',['./act','validate','--dataset-dir',instance.dataset,'--report',root/'dataset_validation.json'])
+    instance.command('validate',['./scripts/bin/act','validate','--dataset-dir',instance.dataset,'--report',root/'dataset_validation.json'])
     report=json.loads((root/'dataset_validation.json').read_text())
     assert report['trainable'] and report['total_frames']==48 and report['decoded_video_frames']==96
     yield instance
@@ -258,14 +258,14 @@ def test_actual_file_failure_gates(pipeline):
     sidecar=bad/contract.TIMING_DIRECTORY/'episode-000000/episode.json'
     value=json.loads(sidecar.read_text());value['integrity']['valid']=False;write(sidecar,value)
     blocked=pipeline.root/'must_not_train'
-    pipeline.command('invalid_dataset_blocks_training',['./act','train','--dataset-dir',bad,'--output-dir',blocked,
+    pipeline.command('invalid_dataset_blocks_training',['./scripts/bin/act','train','--dataset-dir',bad,'--output-dir',blocked,
                      '--steps','1','--device','cpu'],expected=1)
     assert not blocked.exists()
     broken=pipeline.root/'invalid_checkpoint'
     shutil.copytree(manifest['checkpoint'],broken,copy_function=os.link)
     (broken/'policy_postprocessor.json').unlink()
     output=pipeline.root/'blocked_inference'
-    pipeline.command('invalid_checkpoint_blocks_inference',['./act','infer','--checkpoint',broken,'--source','synthetic',
+    pipeline.command('invalid_checkpoint_blocks_inference',['./scripts/bin/act','infer','--checkpoint',broken,'--source','synthetic',
              '--dry-run','--device','cpu','--duration','1','--output-dir',output],expected=1)
     result=json.loads((output/'result.json').read_text())
     assert result['status']=='failed' and result['robot_commands_sent']==0 and not (output/'client').exists()
@@ -283,7 +283,7 @@ def test_connected_evaluation(pipeline):
     report=pipeline.root/'evaluation'
     inputs=[pipeline.root/'train_cpu',pipeline.root/'task_cpu',pipeline.root/'task_cpu_repeat']
     if 'cuda' in pipeline.trained:inputs += [pipeline.root/'train_cuda',pipeline.root/'task_cuda']
-    pipeline.command('evaluate',['./act','evaluate','--runs',*inputs,'--records',pipeline.records,'--report-dir',report])
+    pipeline.command('evaluate',['./scripts/bin/act','evaluate','--runs',*inputs,'--records',pipeline.records,'--report-dir',report])
     result=json.loads((report/'report.json').read_text())
     assert result['unique_attempts']==len(pipeline.tasks)
     assert len(result['offline_training_runs'])==len(pipeline.trained)
@@ -390,7 +390,7 @@ def test_task_faults_clear_actual_scheduler_queue(pipeline,learned_chunk,tmp_pat
 def test_owned_inference_server_loss_is_fault_not_operator_abort(pipeline):
     """Terminate ONLY the server descended from this test's owned launcher."""
     manifest=pipeline.train('cpu');output=pipeline.root/'server_loss_task'
-    command=['./act','task','--task',TASK_NAME,'--mode','mock','--checkpoint',manifest['checkpoint'],
+    command=['./scripts/bin/act','task','--task',TASK_NAME,'--mode','mock','--checkpoint',manifest['checkpoint'],
              '--approve-mock','owned-server-loss-test','--approve-home-mock','--confirm-home-path-mock','Mock only',
              '--device','cpu','--duration','10','--output-dir',str(output)]
     with (pipeline.root/'server_loss_launcher.log').open('x') as log:
@@ -430,7 +430,7 @@ def test_failed_process_result_to_evaluation(pipeline):
     output=pipeline.root/'evaluation_with_server_failure'
     inputs=[pipeline.root/'train_cpu',pipeline.root/'task_cpu',pipeline.root/'task_cpu_repeat',pipeline.root/'server_loss_task']
     if 'cuda' in pipeline.trained:inputs += [pipeline.root/'train_cuda',pipeline.root/'task_cuda']
-    pipeline.command('evaluate_with_server_failure',['./act','evaluate','--runs',*inputs,'--records',pipeline.records,'--report-dir',output])
+    pipeline.command('evaluate_with_server_failure',['./scripts/bin/act','evaluate','--runs',*inputs,'--records',pipeline.records,'--report-dir',output])
     report=json.loads((output/'report.json').read_text())
     mock=report['by_environment']['mock']
     assert mock['physical_outcomes']['task']['rate'] is None

@@ -1,7 +1,7 @@
 # Task 1: Mock Task Executor and separate project Home
 
 ```bash
-./act task --task indy7_basket_to_table1 --mode mock \
+act task --task indy7_basket_to_table1 --mode mock \
   --checkpoint <checkpoint-or-training-run> \
   --approve-mock "operator acknowledgement" --approve-home-mock \
   --confirm-home-path-mock "software fixture path only" --device cpu
@@ -31,7 +31,7 @@ Commands are processed by the client; physical E-stop remains separate.
 For an explicitly simulated user in offline tests only:
 
 ```bash
-./act task --task indy7_basket_to_table1 --mode mock \
+act task --task indy7_basket_to_table1 --mode mock \
   --checkpoint <checkpoint-or-training-run> \
   --approve-mock "offline tester" --approve-home-mock \
   --confirm-home-path-mock "Mock-only path" \

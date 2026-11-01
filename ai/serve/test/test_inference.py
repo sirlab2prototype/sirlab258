@@ -253,7 +253,7 @@ def checkpoint(real_base, tmp_path_factory):
 
 
 def run_cli(checkpoint, output, device):
-    cmd = ["./act", "infer", "--checkpoint", str(checkpoint), "--source", "synthetic", "--dry-run", "--device", device,
+    cmd = ["./scripts/bin/act", "infer", "--checkpoint", str(checkpoint), "--source", "synthetic", "--dry-run", "--device", device,
            "--duration", "2.5", "--output-dir", str(output)]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
     report = json.loads((output / "result.json").read_text())

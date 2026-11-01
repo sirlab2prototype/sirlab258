@@ -1,161 +1,99 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
+# Shared preflight only. Never start/stop containers or robot processes.
+    SHARED="/opt/workspace/omy/cyclo_intelligence"
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OMY_ROOT="$ROOT/external/open_manipulator"
-CONTAINER_SCRIPT="$OMY_ROOT/docker/container.sh"
-CONTAINER_NAME="open_manipulator"
-ROBOT_HOST="${OMY_ROBOT_HOST:-10.42.0.101}"
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=7 -o StrictHostKeyChecking=accept-new)
+    case "${1:-}" in
 
-usage() {
-    cat <<'EOF'
-Usage: omy <command> [arguments]
+        "")
+            echo "=== OMY 실행 전 점검 ==="
 
-Commands:
-  doctor                         Check the local OMY environment
-  start                          Start the official ROBOTIS container
-  enter                          Open a shell in the container
-  stop                           Stop and remove the container (asks first)
-  status                         Show local and robot-side status
-  launch                         Start OMY leader-follower teleoperation
-  robot-stop                     Stop all OMY processes and disable torque
+            # Container names are fixed to the shared environment.
+            for name in cyclo_intelligence open_manipulator; do
+                if [[ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" != "true" ]]; then
+                    echo "[STOP] $name 컨테이너가 실행 중이지 않음"
+                    echo "공용 컨테이너를 자동으로 시작하지 않습니다."
+                    return 1
+                fi
+            done
 
-Examples:
-  omy start
-  omy launch
-  omy status
+            echo "[OK] 공용 Docker 컨테이너 실행 중"
 
-Robot launch commands can move hardware immediately. Keep the emergency stop
-within reach and make sure the work area is clear.
-EOF
-}
+            if ! python3 -c 'import socket; s=socket.create_connection(("10.42.0.101", 7447), timeout=3); s.close()' 2>/dev/null; then
+                echo "[STOP] OMY Zenoh 라우터 연결 불가"
+                echo "로봇 PC 전원 및 네트워크를 확인하세요."
+                return 1
+            fi
 
-require_sources() {
-    if [[ ! -x "$CONTAINER_SCRIPT" ]]; then
-        echo "ERROR: OMY sources are missing: $CONTAINER_SCRIPT" >&2
-        echo "Run: git submodule update --init --recursive" >&2
-        exit 1
-    fi
-}
+            echo "[OK] OMY Zenoh 라우터 연결 가능"
+            echo
+            echo "로봇 구동 전 확인:"
+            echo " - 다른 사용자 사용 여부"
+            echo " - E-stop 및 작업 공간"
+            echo " - 로봇 초기 자세와 Unpack 완료 여부"
+            echo
+            echo "텔레옵 자동 실행은 아직 연결하지 않았습니다."
+            ;;
 
-container_is_running() {
-    docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null | grep -qx true
-}
 
-doctor() {
-    local failed=0
+        status)
+            echo "=== Shared OMY Containers ==="
 
-    echo "OMY project: $OMY_ROOT"
-    if [[ -x "$CONTAINER_SCRIPT" ]]; then
-        echo "[OK] official open_manipulator sources"
-    else
-        echo "[FAIL] official sources are not initialized"
-        failed=1
-    fi
+            docker ps -a \
+                --filter 'name=^/cyclo_intelligence$' \
+                --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
 
-    if command -v docker >/dev/null 2>&1; then
-        echo "[OK] $(docker --version)"
-    else
-        echo "[FAIL] Docker is not installed"
-        failed=1
-    fi
+            docker ps -a \
+                --filter 'name=^/open_manipulator$' \
+                --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
 
-    if docker info >/dev/null 2>&1; then
-        echo "[OK] Docker daemon is accessible"
-    else
-        echo "[FAIL] Docker daemon is not accessible by this user"
-        failed=1
-    fi
+            echo
+            echo "=== D405 ==="
+            lsusb -d 8086:0b5b || true
+            ;;
 
-    if compgen -G '/dev/ttyUSB*' >/dev/null || compgen -G '/dev/ttyACM*' >/dev/null; then
-        echo "[OK] serial device detected"
-        ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true
-    else
-        echo "[WARN] no /dev/ttyUSB* or /dev/ttyACM* device detected"
-        echo "       Network-connected OMY systems may not expose one on the user PC."
-    fi
+        doctor)
+            echo "=== Shared OMY Environment ==="
 
-    if container_is_running; then
-        echo "[OK] $CONTAINER_NAME container is running"
-    else
-        echo "[INFO] $CONTAINER_NAME container is not running"
-    fi
+            if [[ -x "$SHARED/cyclo.sh" ]]; then
+                echo "[OK] Shared Cyclo launcher"
+            else
+                echo "[FAIL] Shared Cyclo launcher missing"
+                return 1
+            fi
 
-    return "$failed"
-}
+            if docker info >/dev/null 2>&1; then
+                echo "[OK] Docker accessible"
+            else
+                echo "[FAIL] Docker inaccessible"
+                return 1
+            fi
 
-require_sources
+            if lsusb -d 8086:0b5b | grep -q 'RealSense'; then
+                echo "[OK] D405 detected"
+            else
+                echo "[WARN] D405 not detected"
+            fi
+            ;;
 
-case "${1:-}" in
-    doctor)
-        doctor
-        ;;
-    start|enter|stop)
-        exec "$CONTAINER_SCRIPT" "$1"
-        ;;
-    status)
-        docker ps -a --filter "name=^/${CONTAINER_NAME}$" \
-            --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
-        ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true
-        echo
-        echo "Robot PC: $ROBOT_HOST"
-        if ssh "${SSH_OPTS[@]}" "root@$ROBOT_HOST" \
-            "docker exec $CONTAINER_NAME pgrep -f '[o]my_.*launch.py'" >/dev/null; then
-            ssh "${SSH_OPTS[@]}" "root@$ROBOT_HOST" \
-                "docker exec -e ROS_DOMAIN_ID=30 -e RMW_IMPLEMENTATION=rmw_zenoh_cpp $CONTAINER_NAME bash -lc 'source /opt/ros/jazzy/setup.bash; source /root/ros2_ws/install/setup.bash; timeout 10 ros2 control list_controllers'"
-        else
-            echo "OMY bringup is stopped; motor torque is disabled."
-        fi
-        ;;
-    launch)
-        shift
-        if (( $# != 0 )); then
-            echo "ERROR: omy launch does not accept arguments" >&2
-            exit 2
-        fi
-        ssh "${SSH_OPTS[@]}" "root@$ROBOT_HOST" bash -s <<'REMOTE'
-set -euo pipefail
-if docker exec open_manipulator pgrep -f '[o]my_ai.launch.py' >/dev/null; then
-    echo "OMY leader-follower teleoperation is already running."
-    exit 0
-fi
-if ! docker exec open_manipulator pgrep -f '[r]mw_zenohd' >/dev/null; then
-    docker exec -d -e ROS_DOMAIN_ID=30 -e RMW_IMPLEMENTATION=rmw_zenoh_cpp open_manipulator \
-        bash -lc 'source /opt/ros/jazzy/setup.bash; exec ros2 run rmw_zenoh_cpp rmw_zenohd > /workspace/rmw_zenohd.log 2>&1'
-    sleep 2
-fi
-docker exec -d -e ROS_DOMAIN_ID=30 -e RMW_IMPLEMENTATION=rmw_zenoh_cpp open_manipulator \
-    bash -lc 'source /opt/ros/jazzy/setup.bash; source /root/ros2_ws/install/setup.bash; exec ros2 launch open_manipulator_bringup omy_ai.launch.py > /workspace/omy_ai_bringup.log 2>&1'
-echo "OMY leader-follower teleoperation started on robot PC."
-REMOTE
-        ;;
-    robot-stop)
-        ssh "${SSH_OPTS[@]}" "root@$ROBOT_HOST" bash -s <<'REMOTE'
-set -euo pipefail
-stop_pattern() {
-    local signal="$1"
-    local pattern="$2"
-    docker exec open_manipulator bash -lc "pkill -$signal -f '$pattern' || true"
-}
-stop_pattern INT '[o]my_ai.launch.py'
-stop_pattern INT '[o]my_f3m.launch.py'
-stop_pattern INT '[o]my_f3m_follower_ai.launch.py'
-stop_pattern INT '[o]my_l100_leader_ai.launch.py'
-sleep 5
-stop_pattern TERM '[o]my_ai.launch.py'
-stop_pattern TERM '[o]my_f3m.launch.py'
-stop_pattern TERM '[o]my_f3m_follower_ai.launch.py'
-stop_pattern TERM '[o]my_l100_leader_ai.launch.py'
-REMOTE
-        echo "All OMY bringup processes stopped; motor torque disabled."
-        ;;
-    -h|--help|help|'')
-        usage
-        ;;
-    *)
-        echo "ERROR: unknown command: $1" >&2
-        usage >&2
-        exit 2
-        ;;
-esac
+        logs)
+            docker logs --tail 100 cyclo_intelligence
+            ;;
+
+        help|-h|--help)
+            echo "Team Capstone - OMY"
+            echo
+            echo "  omy           Safe preflight (no robot motion)"
+            echo "  omy status    Shared container status"
+            echo "  omy doctor    Environment check"
+            echo "  omy logs      Cyclo logs"
+            echo
+            echo "Robot teleoperation is not configured yet."
+            ;;
+
+        *)
+            echo "Unknown or not-yet-configured OMY command: $1" >&2
+            echo "Run: omy --help"
+            return 2
+            ;;
+    esac

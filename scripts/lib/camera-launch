@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -eo pipefail
+ROOT="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../.." && pwd)"
+mode="$1"; shift
+case "$mode" in
+  camera) selection=all; serials=(317222074298 844212071939) ;;
+  cam1) selection=cam1; serials=(844212071939) ;;
+  cam2) selection=cam2; serials=(317222074298) ;;
+  *) echo 'Unknown camera mode' >&2; exit 2 ;;
+esac
+case "${1:-}" in
+  -h|--help|help)
+    echo "Usage: $mode [show_camera:=true|false]"
+    echo "D435 serials: ${serials[*]} (D405 is not included)"
+    echo 'Serial locks protect this user/project CLI only; external camera ownership is unknown.'
+    echo 'Existing camera processes are never stopped/restarted. Ctrl-C stops this launch only.'
+    exit 0 ;;
+esac
+for arg in "$@"; do
+  case "$arg" in
+    show_camera:=true|show_camera:=false) ;;
+    *) echo "Unsupported camera argument: $arg; use $mode --help" >&2; exit 2 ;;
+  esac
+done
+command -v flock >/dev/null 2>&1 || { echo "flock is required for camera duplicate protection; nothing started." >&2; exit 1; }
+# Same user + all checkouts share lock names. Do not unlink lock files: doing so
+# could allow a second process to lock a different inode for the same camera.
+umask 077
+lock_dir="$HOME/.local/bin/.sirlab258-camera-locks"
+mkdir -p "$lock_dir"
+for serial in "${serials[@]}"; do
+  exec {camera_fd}>"$lock_dir/$serial.lock"
+  if ! flock -n "$camera_fd"; then
+    echo "Camera $serial is already locked by this user's camera CLI. Nothing started; existing cameras remain running." >&2
+    exit 1
+  fi
+done
+echo 'External process/other-user camera ownership is not verified. Stop on device-busy errors; do not kill existing camera processes.' >&2
+source /opt/ros/jazzy/setup.bash
+source "$ROOT/.venv/bin/activate"
+source "$ROOT/ros2_ws/install/setup.bash"
+# exec preserves the serial lock FDs for this launch lifetime and normal signals.
+exec ros2 launch "$ROOT/ros2_ws/src/capstone_teleop/launch/cameras.launch.py" "camera_selection:=$selection" "camera_registry:=$ROOT/ros2_ws/src/capstone_teleop/config/rgb_cameras.yaml" "camera_config:=$ROOT/ros2_ws/src/capstone_teleop/config/camera_rgb_only.yaml" "$@"

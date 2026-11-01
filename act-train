@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -e
-
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
-export HF_HOME="${HF_HOME:-$ROOT/.hf_cache}"
-
-exec "$ROOT/.venv-act/bin/python" -m ai.train.run_train "$@"

@@ -330,7 +330,7 @@ def test_real_home_and_task_cli_are_locked(rig):
     rig.settle_task()
     assert rig.task.state=='FAULT' and not rig.indy.home_commands
     assert 'real_project_home_locked' in rig.task.reason
-    command=['./act','task','--task',TASK_NAME,'--mode','real','--checkpoint','unused']
+    command=['./scripts/bin/act','task','--task',TASK_NAME,'--mode','real','--checkpoint','unused']
     result=subprocess.run(command,capture_output=True,text=True)
     assert result.returncode==2 and 'locked' in result.stderr
     command[command.index('real')]='mock'
@@ -439,7 +439,7 @@ def task_checkpoint(real_base,tmp_path_factory):
 
 
 def task_command(checkpoint,output):
-    return ['./act','task','--task',TASK_NAME,'--mode','mock','--checkpoint',str(checkpoint),
+    return ['./scripts/bin/act','task','--task',TASK_NAME,'--mode','mock','--checkpoint',str(checkpoint),
             '--approve-mock','explicit-mock-task-operator','--approve-home-mock',
             '--confirm-home-path-mock','software fixture only','--device','cpu','--output-dir',str(output)]
 

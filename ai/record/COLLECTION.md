@@ -7,19 +7,19 @@ Recorder는 로봇·카메라·Xbox·그리퍼를 시작하거나 제어하지 �
 
 ## 데이터셋 관리
 
-`./act-record`를 인자 없이 실행하면 [데이터셋 관리 GUI](DATASET_MANAGER.md)를 연다.
+`act record`를 인자 없이 실행하면 [데이터셋 관리 GUI](DATASET_MANAGER.md)를 연다.
 `ai/record/plans/<dataset_id>.json`을 자동 인식해 목록에 표시한다.
-정의 작성법은 최상위 [act-record.md](../../act-record.md)를 따른다. 최초 열기에서만 생성하고 기존 Collection은 재개한다.
+정의 작성법은 최상위 [act-record.md](../.act record.md)를 따른다. 최초 열기에서만 생성하고 기존 Collection은 재개한다.
 기존 Core-108과 스냅샷 없는 데이터는 종전 형식으로 읽으며 원본 자료를 변환하지 않는다.
 
 ## 실행 및 조작
 
 아래는 선택 화면에서 이미 생성한 Collection을 기존 CLI로 재개하는 예시다.
-새 사용자 정의 계획의 최초 생성은 [act-record.md](../../act-record.md)의 선택 흐름을 따른다.
+새 사용자 정의 계획의 최초 생성은 [act-record.md](../.act record.md)의 선택 흐름을 따른다.
 
 ```bash
 cd /home/sirlab2/sirlab258
-./act-record --collection-dir outputs/preserved/datasets/act1_108_001
+act record --collection-dir outputs/preserved/datasets/act1_108_001
 ```
 
 같은 명령으로 재개한다. 실제 장비 운용·workspace 검증은 별도 승인 후 진행한다.
@@ -219,7 +219,7 @@ writer는 flock으로 차단한다. 다른 프로그램으로 Dataset에 동시�
 ## 독립 Recorder
 
 추가 인자를 전달한 CLI 또는 엔진 직접 실행에서 --collection-dir를 생략한 기존 모드를 유지한다.
-인자 없는 `./act-record`는 이제 데이터셋 관리 GUI 진입점이다. 정상은 기존 --root, 교정은 별도의
+인자 없는 `act record`는 이제 데이터셋 관리 GUI 진입점이다. 정상은 기존 --root, 교정은 별도의
 --correction-root (기본 datasets/indy7_act_corrections), staging은 기존 --pending-root다.
 원래 repo-id와 --resume 정책을 유지한다. --failure-root/--failure-repo-id는 과거 경로 호환용이며
 새 쓰기 경로가 아니다. 경로 중첩은 거부한다. 독립 모드도 x는 교정 전환이고 o로 유형별 저장한다.

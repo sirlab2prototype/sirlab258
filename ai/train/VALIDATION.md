@@ -37,7 +37,7 @@ if not report["trainable"]:
 ```
 
 `run_train.main()` calls this guard before constructing a Dataset or launching
-the trainer, including in `--dry-run`. The local `./act train` dispatcher uses
+the trainer, including in `--dry-run`. The local `act train` dispatcher uses
 this pipeline. See `TRAINING.md` for splitting, checkpointing and evaluation.
 
 Validation covers every episode and frame, including episodes sharing v3

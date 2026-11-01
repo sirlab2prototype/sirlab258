@@ -2,8 +2,9 @@
 
 이 문서는 기존 README의 장비·Xbox 상세 설명을 옮긴 것이다. 실행 승인이 아니다.
 현재 실물 제한과 검증 시점은 [PROJECT_CONTEXT](PROJECT_CONTEXT.md)를 먼저 확인한다.
-`caps/capi/capx`는 실제 장비 연결·자동 ARM 또는 종료 시 제어 명령 경로가 있다.
-`show_camera:=false`도 카메라 미리보기만 끄며 로봇 실행을 막지 않는다.
+`indy`/`indy driver`/`indy teleop`는 실제 장비 연결·자동 ARM 또는 종료 시 제어 명령 경로가 있다.
+`indy`는 카메라를 실행하지 않는다. `show_camera`는 setup에서 호환 인자로만 남아 카메라 실행에 영향이 없다.
+카메라 명령의 `show_camera:=false`는 영상 미리보기만 끄고 카메라 노드는 유지한다.
 아래 키맵은 현재 코드의 기능 설명이며 Home/Zero/Recover 사용 허가가 아니다.
 Gripper의 0/1과 서비스 성공은 물리 위치·파지 완료가 아닌 명령 상태다.
 
@@ -11,11 +12,17 @@ Gripper의 0/1과 서비스 성공은 물리 위치·파지 완료가 아닌 명
 
 | 명령 | 연결 |
 | --- | --- |
-| `./caps` / 활성화 후 `caps` | 카메라2대·Indy·Mark7·Xbox/QP/GUI 전체 |
-| `capi` | Indy driver |
-| `capg` | Mark7 |
-| `capx` | Xbox/QP/GUI |
+| `indy` | 카메라 없이 Indy·Mark7·Xbox/QP/GUI |
+| `camera` | D435317222074298 +844212071939 |
+| `cam1` | D435844212071939 한 대 |
+| `cam2` | D435317222074298 한 대; `indy cam`은 제거 |
+| `indy driver` | Indy driver |
+| 내부 `scripts/bin/capg` | 기존 Mark7 개별 경로; 일반 운용은 `indy` |
+| `indy teleop` | Xbox/QP/GUI |
 
+카메라는 별도 터미널에서 독립 실행한다. 새 명령끼리만 같은 사용자 serial 잠금을 공유한다.
+하나가 실행 중일 때 `camera`는 전체 요청을 거절하며 기존 카메라를 종료/재시작하지 않는다.
+외부 프로세스·다른 사용자 점유는 확인할 수 없다. 자세한 제한은 README를 따른다.
 실제 운용 승인을 받은 경우에만 사용한다. 환경은 프로젝트 `.venv`와
 `ros2_ws/install/setup.bash`를 사용하며, 설정 원본은
 `ros2_ws/src/capstone_teleop/config/`와 `capstone_mark7/config/mark7.yaml`이다.
@@ -131,7 +138,7 @@ Recover and Zero do not automatically re-arm.
 
 # Xbox GUI
 
-`capx` and `caps` automatically start the Xbox information GUI.
+`indy teleop` and `indy` automatically start the Xbox information GUI.
 
 The GUI displays:
 

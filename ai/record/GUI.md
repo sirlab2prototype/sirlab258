@@ -1,7 +1,7 @@
 # Indy7 ACT Recorder 데스크톱 GUI
 
 Indy7 ACT 수집을 기존 Recorder 엔진의 버튼 입력으로 사용한다. 로봇 제어·장비 launch·
-Home·Gripper 버튼은 없다. 경로 없는 실행은 [파일 기반 데이터셋 선택 화면](../../act-record.md)을 연다.
+Home·Gripper 버튼은 없다. 경로 없는 실행은 [파일 기반 데이터셋 선택 화면](../.act record.md)을 연다.
 명시한 `--collection-dir` 실행과 기존 녹화 엔진을 유지한다.
 
 새 정식 Collection 경로·명명·재개 방법은 [outputs 관리](../../docs/OUTPUTS.md)를 따른다.

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -eo pipefail
+ROOT="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../.." && pwd)"
+case "${1:-}" in
+  help|-h|--help)
+    echo 'Usage: indy [driver|teleop] [ROS launch arguments]'
+    echo 'indy: Indy7 + Mark7 + Xbox/QP + GUI (cameras are separate)'
+    echo 'Examples: indy indy_ip:=IP; camera / cam1 / cam2 for D435'
+    echo 'Shared D435 317222074298: do not launch it concurrently with OMY.'
+    exit 0 ;;
+  '') launch=setup.launch.py ;;
+  driver) shift; launch=indy.launch.py ;;
+  teleop) shift; launch=xbox.launch.py ;;
+  *:=*) launch=setup.launch.py ;;
+  *) echo "Unknown Indy7 command: $1; use indy --help" >&2; exit 2 ;;
+esac
+source /opt/ros/jazzy/setup.bash
+source "$ROOT/.venv/bin/activate"
+source "$ROOT/ros2_ws/install/setup.bash"
+exec ros2 launch "$ROOT/ros2_ws/src/capstone_teleop/launch/$launch" "$@"

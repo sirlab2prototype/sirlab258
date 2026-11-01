@@ -249,9 +249,9 @@ def test_real_adapters_inactive_by_default_and_real_cli_locked(rig):
     adapter=RosIndy7Adapter(NoOperations(),None)
     with pytest.raises(SafetyError): adapter.activate(threading.Event(),rig.config)
     with pytest.raises(SafetyError): adapter.send_absolute(np.zeros(6))
-    result=subprocess.run(['./act','execute','--mode','real','--checkpoint','not-used'],capture_output=True,text=True)
+    result=subprocess.run(['./scripts/bin/act','execute','--mode','real','--checkpoint','not-used'],capture_output=True,text=True)
     assert result.returncode==2 and 'locked' in result.stderr
-    result=subprocess.run(['./act','execute','--mode','mock','--checkpoint','not-used'],capture_output=True,text=True)
+    result=subprocess.run(['./scripts/bin/act','execute','--mode','mock','--checkpoint','not-used'],capture_output=True,text=True)
     assert result.returncode==2 and '--approve-mock' in result.stderr
 
 
@@ -403,7 +403,7 @@ def test_synthetic_checkpoint_to_mock_devices(execution_checkpoint,tmp_path):
     profile=json.loads((ROOT/'ai/execute/config/mock.json').read_text())
     config=tmp_path/'test-config.json';config.write_text(json.dumps(profile))
     output=tmp_path/'mock-run'
-    result=subprocess.run(['./act','execute','--mode','mock','--checkpoint',str(checkpoint),'--config',str(config),
+    result=subprocess.run(['./scripts/bin/act','execute','--mode','mock','--checkpoint',str(checkpoint),'--config',str(config),
             '--approve-mock','offline-test-explicit-arm','--device','cpu','--duration','2.5','--output-dir',str(output)],
             capture_output=True,text=True,timeout=90)
     report=json.loads((output/'result.json').read_text())

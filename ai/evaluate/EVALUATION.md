@@ -1,8 +1,8 @@
 # ACT evaluation and failure analysis
 
 ```bash
-./act evaluate --runs outputs/ --report-dir outputs/evaluation_report
-./act evaluate --runs outputs/ --records outputs/act_evaluations \
+act evaluate --runs outputs/ --report-dir outputs/evaluation_report
+act evaluate --runs outputs/ --records outputs/act_evaluations \
   --checkpoint <checkpoint-content-id> --condition region=L \
   --condition training_coverage=unseen --report-dir outputs/evaluation_left
 ```
@@ -56,10 +56,10 @@ Real-shaped metadata are fabricated fixtures, not experimental results.
 ## Operator record workflow
 
 ```bash
-./act evaluate template --task-result outputs/<run>/client/task_result.json \
+act evaluate template --task-result outputs/<run>/client/task_result.json \
   --output outputs/ratings/trial1_judgment.json
 # Operator edits the new judgment file, independently of the Task source.
-./act evaluate record --task-result outputs/<run>/client/task_result.json \
+act evaluate record --task-result outputs/<run>/client/task_result.json \
   --judgment outputs/ratings/trial1_judgment.json --store outputs/act_evaluations
 ```
 
@@ -82,7 +82,7 @@ was present in training.
 To correct an assessment, edit a new judgment file and append a new record:
 
 ```bash
-./act evaluate record --task-result outputs/<run>/client/task_result.json \
+act evaluate record --task-result outputs/<run>/client/task_result.json \
   --judgment outputs/ratings/trial1_corrected.json --store outputs/act_evaluations \
   --supersedes <current-evaluation-id>
 ```

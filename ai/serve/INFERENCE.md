@@ -13,8 +13,8 @@ an assumed initial state as described below.
 From the project root, after collecting data and explicitly training:
 
 ```bash
-./act infer --checkpoint outputs/my_act_run --source synthetic --dry-run
-./act infer --checkpoint outputs/my_act_run --source ros --dry-run
+act infer --checkpoint outputs/my_act_run --source synthetic --dry-run
+act infer --checkpoint outputs/my_act_run --source ros --dry-run
 ```
 
 Optional transient camera timing recovery is restricted to ROS log-only Dry Run:
@@ -27,7 +27,7 @@ See [recovery behavior and 10s/60s commands](../../docs/ACT_ROS_RECOVERY.md).
 Optional **ROS Dry Run only** initial assumption:
 
 ```bash
-./act infer --checkpoint <pretrained_model> --source ros --dry-run \
+act infer --checkpoint <pretrained_model> --source ros --dry-run \
   --operator-initial-gripper 0
 ```
 
@@ -56,7 +56,7 @@ readiness. Setup does not start training, teleop or inference. The ROS command
 is implemented but must be run only when robot/camera operation is authorized
 separately; this work's tests never start real ROS nodes or devices.
 
-`./act infer` owns a localhost server process in `.venv-act` and an observation
+`act infer` owns a localhost server process in `.venv-act` and an observation
 client process. The ROS client uses `.venv/bin/python` after sourcing ROS Jazzy
 and the existing workspace environment; it does not import Torch or LeRobot.
 No camera/driver/teleop/gripper launch command is executed. Synthetic mode uses
@@ -78,7 +78,7 @@ verified controller status/reviewed real safety profile is available.
 Useful implemented options:
 
 ```bash
-./act infer --checkpoint outputs/my_act_run --source synthetic --dry-run \
+act infer --checkpoint outputs/my_act_run --source synthetic --dry-run \
   --device cpu --duration 10 --rpc-timeout-ms 250 --prefetch-steps 3
 ```
 

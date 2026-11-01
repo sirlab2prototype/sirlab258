@@ -1,7 +1,7 @@
 # Indy7 / Mark7 guarded execution (Mock verified; Real CLI locked)
 
 Task 1 orchestration, explicit user completion and separate Mock project-Home
-return are available through `./act task`; see [TASK_EXECUTOR.md](TASK_EXECUTOR.md).
+return are available through `act task`; see [TASK_EXECUTOR.md](TASK_EXECUTOR.md).
 Real Task/Home activation remains locked. The APIs below remain the ACT phase
 controller used by that orchestrator.
 
@@ -9,15 +9,15 @@ controller used by that orchestrator.
 
 ```bash
 # Explicitly approve Mock arming/start; never hardware:
-./act execute --mode mock --checkpoint outputs/my_act_run \
+act execute --mode mock --checkpoint outputs/my_act_run \
   --approve-mock "operator acknowledgement for software test" --device cpu --duration 10
 
 # Existing log-only modes remain unchanged:
-./act infer --checkpoint outputs/my_act_run --source synthetic --dry-run
-./act infer --checkpoint outputs/my_act_run --source ros --dry-run
+act infer --checkpoint outputs/my_act_run --source synthetic --dry-run
+act infer --checkpoint outputs/my_act_run --source ros --dry-run
 ```
 
-No approval flag means no Mock arming. `./act execute --mode real` is rejected
+No approval flag means no Mock arming. `act execute --mode real` is rejected
 before creating devices/nodes. Setup is not an execution command. The normal
 Dry Run path never instantiates an execution controller or command adapter.
 Standalone Mock execution starts at zero joints by default. For a Checkpoint
@@ -27,7 +27,7 @@ the configured limits; no clipping occurs. This only initializes the software
 plant before observations begin. Task Mock already uses the project Home and
 does not accept this independent-pose override. No hardware state is set/moved.
 The optional inference-runner bridge accepts Mock only; no Real adapter can be
-selected through `./act infer --dry-run`. Internal Scheduler `dry_run=true` and
+selected through `act infer --dry-run`. Internal Scheduler `dry_run=true` and
 `robot_commands_sent=0` mean hardware output is disabled; a Mock run separately
 reports `execution_mode=mock` and submitted/acknowledged Mock commands.
 
