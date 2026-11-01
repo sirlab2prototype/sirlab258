@@ -121,7 +121,7 @@ hold/open 시험 모델이다. 실제 조작 성능 검증용이 아니며 경�
 
 ```bash
 cd /home/sirlab2/sirlab258
-ACT_CHECKPOINT=outputs/act_final_offline_20261031T025706Z_09a8f399/integration_final/train_cuda/training/checkpoints/000003/pretrained_model
+ACT_CHECKPOINT=outputs/temporary/verification/act_final_offline_20261031T025706Z_09a8f399/integration_final/train_cuda/training/checkpoints/000003/pretrained_model
 
 # 초기 안정화 후 실행 단계10초
 ./act infer --checkpoint "$ACT_CHECKPOINT" --source ros --dry-run \

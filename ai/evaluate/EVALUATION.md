@@ -196,7 +196,7 @@ hyperparameters, safety limits or robot control automatically.
 
 `ai/evaluate/test/test_evaluation.py` uses project-local temporary metadata and
 operator fixtures, plus retained actual earlier Synthetic ACT/Mock Task E2E logs
-in `outputs/act_task_verification_c3740dc278`. It does not train or run a policy.
+in `outputs/temporary/verification/act_task_verification_c3740dc278`. It does not train or run a policy.
 Retained source bytes are checked unchanged. Training-bearing legacy tests must
 be excluded when the current work prohibits learning; report their exclusion
 explicitly instead of claiming a fresh training/checkpoint E2E run.

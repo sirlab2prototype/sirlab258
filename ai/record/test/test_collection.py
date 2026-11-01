@@ -236,8 +236,10 @@ def test_committed_without_timing_proof_stays_blocked(managed, monkeypatch):
 
 
 def test_no_pilot_adoption_or_symlink_or_concurrent_writer(tmp_path):
-    with pytest.raises(c.CollectionError, match="Pilot"):
-        c.Collection(c.PROJECT / "outputs/act_recorder_pilot_20261031/formal")
+    for relative in ("outputs/act_recorder_pilot_20261031/formal",
+                     "outputs/temporary/verification/act_recorder_pilot_20261031/formal"):
+        with pytest.raises(c.CollectionError, match="Pilot"):
+            c.Collection(c.PROJECT / relative)
     root = tmp_path / "formal"
     root.mkdir()
     (root / "success").mkdir()

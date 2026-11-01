@@ -35,6 +35,22 @@
 | `ai/execute/{controller,task_executor}.py` | Mock 명령/정지·명령권·Task/Home 상태 관리 |
 | `ai/evaluate/main.py` | 오차·실행 신뢰성·별도 작업자 평가 보고서 |
 
+## outputs 분류 및 신규 수집 경로 (2026-11-01)
+
+- 사용자 확인 기준 정식 ACT 학습 Dataset은 아직 0개다.
+- `outputs/act_gui_integration_test`만 장기 보존하며 기존 위치·이름을 유지한다.
+  실제 Indy7 Recorder 통합 테스트 결과로 Success 1개/900 frames,
+  Correction 1개/1696 frames와 조건 정의108개가 있다. 정상108개 수집 완료가 아니다.
+  사용자 제공 실물 통합 결과이며 이번 정리에서 장비·영상을 재검증하지 않았다.
+- 나머지 기존18개 폴더는 `outputs/temporary/{inference,verification}`으로 이동했다.
+  실물 Pilot·합성 Checkpoint·검증 근거도 임시 검증 산출물이며 정식 Dataset과 구분한다.
+- 새 정식 Collection은 최초부터 `outputs/preserved/datasets/<dataset_id>`에 생성한다.
+  기존 기본값은 유지한다. 경로·명명·기존 Collection 재개 제한은 [outputs 관리](OUTPUTS.md)를 따른다.
+- 이동 전후 기존19개 폴더412파일의 목록·SHA-256과 링크 대상을 대조했다.
+  근거: `tmp/outputs_cleanup_vv70otzr/`. 기존 내부 메타데이터·장부·receipt는 수정하지 않았다.
+- 정리 검증: 경로 보호·합성 저장/재개·메타데이터 평가 **66 passed**. 새 중첩 경로의
+  격리 Collection 생성/재개도 확인했다. ROS·장비·학습·추론 실행은 없었다.
+
 ## 수집에서 평가까지
 
 실물 운용 승인 및 장비 상태 확인 → 카메라/상태/QP 목표 → Recorder/Core-108 → Success Dataset →
@@ -59,11 +75,11 @@ Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dr
 | 항목 | 확인 범위 / 근거 | 확대하면 안 되는 범위 |
 | --- | --- | --- |
 | 과거 수동 제어 | 2026-10-02 등의 실물 운용 이력. [Teleop](TELEOP.md), [J6 인계](INDY7_J6_FAULT_HANDOFF.md) | 최신 전체 stack의 실물 인증 |
-| 기존 Recorder 실물 입력 Pilot | 사용자 실측과 `outputs/act_recorder_pilot_20261031/success` 저장 기록: 5 Episode/3264 frames/20FPS. sidecar는 saved·success·integrity valid | 정식108개 완료·최신 Core/Correction·물리적 파지 성공. 이번에는 영상을 재검증하지 않음 |
+| 기존 Recorder 실물 입력 Pilot | 사용자 실측과 `outputs/temporary/verification/act_recorder_pilot_20261031/success` 저장 기록: 5 Episode/3264 frames/20FPS. sidecar는 saved·success·integrity valid | 정식108개 완료·최신 Core/Correction·물리적 파지 성공. 이번에는 영상을 재검증하지 않음 |
 | 최신 Core-108/Correction | 정리 후 CPU 회귀의120개, 원본108개 합성 저장·중단/부분 저장·reconcile·교정 마커 포함 | 최신 실물 통합 검증은 미완료 |
 | ACT CPU 연결 | 2026-11-01 GUI 디자인 개편 후 `547 passed / 0 failed / CUDA2 deselected` (기존482+GUI65), 공식 소형 ACT3-step·Checkpoint·추론·Mock·평가 | 최종 모델 수렴·실물 ACT 성능 |
 | Recorder GUI | 실험용 네 영역 UI·기술 정보 팝업, GUI65개 검증. 실제 Tk에서 Fake 상태로 렌더링·최소860×640/기본960×660·긴 Depth/오류 경계 확인. 엔진·bridge 유지 | ROS 실수신 부하·실물 운용 미검증 |
-| 과거 CUDA 합성 연결 | 별도 `outputs/act_final_offline_20261031T025706Z_09a8f399/verification.json`의 CPU/CUDA3-step 기록 | 최신482개에서 CUDA 재검증한 결과가 아님 |
+| 과거 CUDA 합성 연결 | 별도 `outputs/temporary/verification/act_final_offline_20261031T025706Z_09a8f399/verification.json`의 CPU/CUDA3-step 기록 | 최신482개에서 CUDA 재검증한 결과가 아님 |
 | 실제 ROS 입력 ACT 추론 | CLI 구현·fake ROS 검증 존재; 별도 실물 관측 추론 실행 완료 근거는 미확인 | Recorder Pilot을 추론 검증으로 대체하지 않음 |
 | ACT 실제 모터 실행·Real Home | 미검증·CLI/API 잠금 유지 | Mock Task/Home 성공으로 해제하지 않음 |
 

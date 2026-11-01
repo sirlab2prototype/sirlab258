@@ -353,7 +353,7 @@ def test_report_cli_template_record_and_input_preservation(workspace):
 
 
 def test_existing_actual_synthetic_mock_e2e_to_report(workspace):
-    artifacts=ROOT/'outputs/act_task_verification_c3740dc278'
+    artifacts=ROOT/'outputs/temporary/verification/act_task_verification_c3740dc278'
     assert artifacts.is_dir(),'Expected retained prior Synthetic ACT/Mock Task verification artifacts'
     before={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in artifacts.glob('*.json*')}
     result=analyze(load_sources([artifacts]),load_conditions(DEFAULT_CONDITIONS))

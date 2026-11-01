@@ -172,9 +172,11 @@ def dataset_inventory(root):
 class Collection:
     def __init__(self, directory, plan=PLAN, *, recovery=False):
         self.directory = Path(directory).expanduser().resolve()
-        pilot = (PROJECT / "outputs/act_recorder_pilot_20261031").resolve()
-        if self.directory.is_relative_to(pilot) or pilot.is_relative_to(self.directory):
-            raise CollectionError("Formal collection and Pilot paths must be separate and non-nested")
+        for relative in ("outputs/act_recorder_pilot_20261031",
+                         "outputs/temporary/verification/act_recorder_pilot_20261031"):
+            pilot = (PROJECT / relative).resolve()
+            if self.directory.is_relative_to(pilot) or pilot.is_relative_to(self.directory):
+                raise CollectionError("Formal collection and Pilot paths must be separate and non-nested")
         self.roots = {kind: self.directory / kind for kind in ("success", "correction", "failure")}
         self.pending_root = self.directory / "pending"
         for path in [*self.roots.values(), self.pending_root]:

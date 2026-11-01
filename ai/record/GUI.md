@@ -3,6 +3,8 @@
 Core-108 수집을 기존 Recorder 엔진의 버튼 입력으로 사용한다. 로봇 제어·장비 launch·
 Home·Gripper 버튼은 없다. 기존 CLI와 실행 wrapper는 그대로다.
 
+새 정식 Collection 경로·명명·재개 방법은 [outputs 관리](../../docs/OUTPUTS.md)를 따른다.
+
 ## 실행
 
 현재 연구실 PC의 데스크톱 또는 X 디스플레이가 전달되는 터미널에서:
@@ -12,7 +14,7 @@ cd /home/sirlab2/sirlab258
 source /opt/ros/jazzy/setup.bash
 source ros2_ws/install/setup.bash
 source scripts/activate_act.sh
-python -m ai.record.gui --collection-dir datasets/indy7_act_core108
+python -m ai.record.gui --collection-dir outputs/preserved/datasets/act1_108_001
 ```
 
 이는 실행 방법이며 실물 연결 승인이 아니다. [현재 안전 제한](../../docs/PROJECT_CONTEXT.md)을

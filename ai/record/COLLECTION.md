@@ -3,11 +3,13 @@
 기존 Recorder의 구독·프레임 저장·20Hz 고정 그리드·60ms 시작 검증·시간 무결성 검사를 유지한다.
 Recorder는 로봇·카메라·Xbox·그리퍼를 시작하거나 제어하지 않는다.
 
+새 정식 Collection 경로·명명·재개 방법은 [outputs 관리](../../docs/OUTPUTS.md)를 따른다.
+
 ## 실행 및 조작
 
 ```bash
 cd /home/sirlab2/sirlab258
-./act-record --collection-dir datasets/indy7_act_core108
+./act-record --collection-dir outputs/preserved/datasets/act1_108_001
 ```
 
 같은 명령으로 재개한다. 실제 장비 운용·workspace 검증은 별도 승인 후 진행한다.
@@ -200,7 +202,7 @@ reconcile은 Dataset에 Episode를 추가하거나 기존 파일/Index를 수정
 보존하고 다음 Attempt를 사용한다. 교정 입력·매핑 metadata와 raw도 보존하고 자동 이어 녹화하지 않는다.
 정상 fsync를 지원하는 로컬 파일시스템을 전제로 하며 실제 PC 전원 차단 실험은 하지 않았다.
 
-Pilot outputs/act_recorder_pilot_20261031은 편입·수정·삭제하지 않는다. 같은 장부의 동시 managed
+Pilot outputs/temporary/verification/act_recorder_pilot_20261031은 편입·수정·삭제하지 않는다. 같은 장부의 동시 managed
 writer는 flock으로 차단한다. 다른 프로그램으로 Dataset에 동시에 append하지 않는다.
 자료가 있는데 장부가 없으면 자동 편입하지 않는다.
 
@@ -236,5 +238,5 @@ AST 대조도 통과했다. 실제 수집 데이터·Pilot·외부 라이브러�
 640×480·30FPS 설정이다. 장비를 이 가이드에서 자동 시작하지 않는다.
 과거 동시 수신에서 프레임률 변동·844212071939의 USB2 연결이 관측됐으므로
 실제 mount/역할·USB 대역폭·timestamp는 승인된 운용 조건에서 확인한다.
-이전 Recorder 실물 입력 Pilot은 `outputs/act_recorder_pilot_20261031`에 보존하며
+이전 Recorder 실물 입력 Pilot은 `outputs/temporary/verification/act_recorder_pilot_20261031`에 보존하며
 정식 Core-108 완료나 최신 Correction의 실물 검증으로 확대하지 않는다.

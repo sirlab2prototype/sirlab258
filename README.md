@@ -7,6 +7,7 @@ LeRobot ACT 학습·추론·평가로 연결하는 팀 프로젝트다.
 
 - Codex 작업 규칙: [AGENTS.md](AGENTS.md)
 - 현재 구현·검증·제약·다음 작업: [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md)
+- 산출물 분류·새 정식 데이터 경로: [outputs 관리](docs/OUTPUTS.md)
 - 작업자 수집 안내: [Recorder / Core-108](ai/record/COLLECTION.md)
 
 과거 실물 Pilot과 최신 소프트웨어 검증은 다르다. 최신 Core-108/Correction과
@@ -48,7 +49,7 @@ Checkpoint → Synthetic/ROS 관측 Dry Run → Mock Execution/Task → 별도 �
 | 진입점 | 역할·상세 문서 |
 | --- | --- |
 | `./caps`, `capi`, `capg`, `capx` | 실제 장비 운영. [Teleop/장비 가이드](docs/TELEOP.md) |
-| `./act-record --collection-dir datasets/indy7_act_core108` | [수집·저장·재개·reconcile](ai/record/COLLECTION.md) |
+| `./act-record --collection-dir outputs/preserved/datasets/act1_108_001` | [수집·저장·재개·reconcile](ai/record/COLLECTION.md) |
 | `./act validate`, `./act train` (기존 `./act-train` 호환) | [검증 기준](ai/train/VALIDATION.md), [학습·재개·Checkpoint](ai/train/TRAINING.md) |
 | `./act infer` | [Synthetic/ROS 관측 Dry Run](ai/serve/INFERENCE.md) |
 | `./act execute`, `./act task` | [Mock 실행 계층](ai/execute/EXECUTION.md), [Task/Home](ai/execute/TASK_EXECUTOR.md) |

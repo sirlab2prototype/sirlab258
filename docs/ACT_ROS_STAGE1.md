@@ -130,7 +130,7 @@ timeout 10 ros2 topic hz /joint_states --window 100 --wall-time
 첫 인터페이스 확인에는 보존된 Synthetic Checkpoint를 사용할 수 있다. hold/open 시험용이며 물체 조작 능력이 있다고 판단하지 않는다. 운영 평가에서는 실제 학습 Checkpoint로 바꾼다.
 
 ```bash
-ACT_ROS_CHECKPOINT=outputs/act_final_offline_20261031T025706Z_09a8f399/integration_final/train_cuda/training/checkpoints/000003/pretrained_model
+ACT_ROS_CHECKPOINT=outputs/temporary/verification/act_final_offline_20261031T025706Z_09a8f399/integration_final/train_cuda/training/checkpoints/000003/pretrained_model
 ./act infer --checkpoint "$ACT_ROS_CHECKPOINT" --source ros --dry-run \
   --device auto --duration 10 --observation-startup-timeout 10
 ```
