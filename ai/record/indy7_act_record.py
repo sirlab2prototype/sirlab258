@@ -15,6 +15,7 @@ import argparse
 from array import array
 from bisect import bisect_left
 from copy import deepcopy
+from contextlib import nullcontext
 import json
 import os
 import queue
@@ -407,7 +408,7 @@ class EpisodeSession:
                            "input_received_monotonic_ns": received, "input_received_system_time_ns": system,
                            "command_processed_monotonic_ns": processed,
                            "boundary_monotonic_ns": processed if received is None else received,
-                           "boundary_source": "command_processing_fallback" if received is None else "stdin_line_received",
+                           "boundary_source": "command_processing_fallback" if received is None else getattr(command, "boundary_source", "stdin_line_received"),
                            "start_frame_index": None, "start_dataset_timestamp_s": None,
                            "start_reference_monotonic_ns": None, "start_reference_system_time_ns": None}
         self._bind_correction()
@@ -738,7 +739,7 @@ def _validate_destination(root: Path, fps: int, resume: bool):
             raise ValueError(f"Dataset feature mismatch: {root}: {key}")
 
 
-def _check_pending(pending_root: Path, roots, collection=None):
+def _check_pending(pending_root: Path, roots, collection=None, *, emit=print):
     for manifest in pending_root.glob("take-*/episode.json"):
         info = json.loads(manifest.read_text(encoding="utf-8"))
         if collection:
@@ -747,12 +748,12 @@ def _check_pending(pending_root: Path, roots, collection=None):
                              (a["status"] in ("SUCCESS", "CORRECTION", "FAILURE") or
                               a.get("recovery") == "destination_unchanged_no_episode_added")), None)
             if resolved:
-                print(f"[복구 기록] 대조가 끝난 staging이 남아 있습니다 (재저장 금지): {manifest.parent}")
+                emit(f"[복구 기록] 대조가 끝난 staging이 남아 있습니다 (재저장 금지): {manifest.parent}")
                 continue
         if info.get("status") in ("saving", "save_failed", "dataset_committed_timing_pending") and info.get("target_root") in roots:
             raise ValueError(f"Unresolved partial save: {manifest}; inspect before collecting again")
         if info.get("status") != "saved":
-            print(f"[미저장 시연] 자동으로 이어 녹화하지 않습니다. Pending : {manifest.parent}")
+            emit(f"[미저장 시연] 자동으로 이어 녹화하지 않습니다. Pending : {manifest.parent}")
 
 
 class CommandInput(str):
@@ -793,7 +794,9 @@ def configure_terminal_logging():
     av.logging.set_libav_level(av.logging.WARNING)
 
 
-def main() -> int:
+def main(argv=None, *, frontend=None) -> int:
+    # CLI keeps stdin/print; the desktop frontend supplies only input and status.
+    emit = print if frontend is None else frontend.message
     configure_terminal_logging()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-id", default="local/indy7_act")
@@ -815,7 +818,7 @@ def main() -> int:
     for name, default in asdict(SyncOptions()).items():
         parser.add_argument("--" + name.replace("_", "-"), type=int if name == "history_size" else float,
                             default=default)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     collection = None
     if args.collection_dir:
@@ -827,7 +830,7 @@ def main() -> int:
             collection = Collection(args.collection_dir)
         except (ValueError, OSError, KeyError, IndexError) as exc:
             directory = args.collection_dir.expanduser().resolve()
-            print(ui.panel("수집 차단 - Collection Blocked", [f"오류 : {exc}", f"Pending : {directory / 'pending'}",
+            emit(ui.panel("수집 차단 - Collection Blocked", [f"오류 : {exc}", f"Pending : {directory / 'pending'}",
                 "복구 : .venv-act/bin/python -m ai.record.collection reconcile --collection-dir " + shlex.quote(str(directory))]))
             return 1
         args.root, args.failure_root = collection.roots["success"], collection.roots["failure"]
@@ -851,10 +854,15 @@ def main() -> int:
         for root in roots.values():
             _validate_destination(root, args.fps, args.resume)
         if collection:
-            _check_pending(pending_root, {str(root) for root in roots.values()}, collection)
+            _check_pending(pending_root, {str(root) for root in roots.values()}, collection, emit=emit)
         else:
-            _check_pending(pending_root, {str(root) for root in roots.values()})
+            _check_pending(pending_root, {str(root) for root in roots.values()}, emit=emit)
     except (ValueError, OSError) as exc:
+        if collection:
+            collection.close()
+        if frontend:
+            emit(ui.panel("시작 차단", [f"오류 : {exc}", f"Pending : {pending_root}",
+                "복구 : " + ui.recovery_command(collection, pending_root)]))
         parser.error(str(exc))
 
     def open_dataset(outcome):
@@ -872,23 +880,38 @@ def main() -> int:
             features=_features(), use_videos=True, image_writer_threads=0, vcodec="h264",
         )
 
-    rclpy.init()
-    node = Indy7Observations(
-        args.camera_317_topic,
-        args.camera_844_topic,
-        args.state_topic,
-        args.action_topic,
-        args.gripper_topic,
-        sync_options,
-    )
-    commands = _commands()
+    try:
+        if frontend is None:
+            rclpy.init()
+        else:
+            from rclpy.signals import SignalHandlerOptions
+            rclpy.init(args=[], signal_handler_options=SignalHandlerOptions.NO)
+        node = Indy7Observations(
+            args.camera_317_topic,
+            args.camera_844_topic,
+            args.state_topic,
+            args.action_topic,
+            args.gripper_topic,
+            sync_options,
+        )
+    except BaseException:
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        finally:
+            if collection:
+                collection.close()
+        raise
+    commands = _commands() if frontend is None else frontend.commands
     session = EpisodeSession(pending_root, open_dataset, args.fps, args.task, collection=collection) if collection else EpisodeSession(pending_root, open_dataset, args.fps, args.task)
     starter = PendingStart(sync_options)
     quit_requested = False
     period = 1.0 / args.fps
 
-    print(ui.startup(collection))
+    emit(ui.startup(collection))
     try:
+        if frontend:
+            frontend.update(session, starter, node, force=True)
         while rclpy.ok() and not quit_requested:
             try:
                 timeout = 0.01
@@ -899,89 +922,96 @@ def main() -> int:
                 rclpy.spin_once(node, timeout_sec=timeout)
             except KeyboardInterrupt:
                 if starter.active:
-                    print(starter.cancel("user_interrupt"))
+                    emit(starter.cancel("user_interrupt"))
                 if session.state == "RECORDING":
                     timing, history = node.history_snapshot()
-                    print(session.finish_aligned(history, timing))
+                    emit(session.finish_aligned(history, timing))
                     history = None
                 if session.path is None:
                     break
-                print(f"[중단] Pending : {session.path}\no : 저장, d : 폐기, q : 종료")
+                emit(f"[중단] Pending : {session.path}\no : 저장, d : 폐기, q : 종료")
                 continue
-            while not commands.empty():
-                raw_command = commands.get()
-                verb = raw_command.split(maxsplit=1)[0].lower() if raw_command.strip() else ""
-                if verb in ("help", "guide"):
-                    print(ui.help_text() if verb == "help" else ui.guide())
-                    continue
-                if collection:
-                    try:
-                        reply = collection.command(raw_command)
-                        if reply is not None:
-                            print(reply)
-                            continue
-                    except (ValueError, OSError, KeyError, IndexError) as exc:
-                        print(f"[수집 안내 오류] {exc}")
+            while not commands.empty() or (frontend and frontend.abort.is_set()):
+                raw_command = "__eof__" if frontend and frontend.abort.is_set() else commands.get()
+                scope = (frontend.command_scope(raw_command, session, starter, node)
+                         if frontend and raw_command != "__eof__" else nullcontext(True))
+                with scope as accepted:
+                    if not accepted:
                         continue
-                command = _normalize_command(raw_command)
-                if command == "start":
-                    if starter.active:
-                        print("[시작 검사] 이미 확인 중입니다. 기존 시작 기준은 유지합니다. r/d : 취소")
-                        continue
-                    if session.state != "READY":
-                        print("[시작 거부] 현재 시연을 먼저 저장하거나 폐기하세요.")
+                    verb = raw_command.split(maxsplit=1)[0].lower() if raw_command.strip() else ""
+                    if verb in ("help", "guide"):
+                        emit(ui.help_text() if verb == "help" else ui.guide())
                         continue
                     if collection:
                         try:
-                            collection.prepare()
-                        except (ValueError, OSError) as exc:
-                            print(f"[시작 거부] {exc}")
+                            reply = collection.command(raw_command)
+                            if reply is not None:
+                                emit(reply)
+                                continue
+                        except (ValueError, OSError, KeyError, IndexError) as exc:
+                            emit(f"[수집 안내 오류] {exc}")
                             continue
-                    timing, history = node.history_snapshot()
-                    try:
-                        print(starter.request(timing, history))
-                    except IntegrityError as exc:
-                        print(f"[시작 검사] 실패: {exc.reason}: {exc.details}")
-                    finally:
-                        history = None  # Do not retain an RGB history snapshot in READY/REVIEW.
-                elif command == "stop":
-                    if starter.active:
-                        print(starter.cancel("user_stop"))
-                    elif session.state == "RECORDING":
+                    command = _normalize_command(raw_command)
+                    if command == "start":
+                        if starter.active:
+                            emit("[시작 검사] 이미 확인 중입니다. 기존 시작 기준은 유지합니다. r/d : 취소")
+                            continue
+                        if session.state != "READY":
+                            emit("[시작 거부] 현재 시연을 먼저 저장하거나 폐기하세요.")
+                            continue
+                        if collection:
+                            try:
+                                collection.prepare()
+                            except (ValueError, OSError) as exc:
+                                emit(f"[시작 거부] {exc}")
+                                continue
                         timing, history = node.history_snapshot()
-                        print(session.finish_aligned(history, timing))
-                        history = None
-                    else:
-                        print(session.stop())
-                elif command == "correction":
-                    print(session.mark_correction(raw_command))
-                elif command == "success":
-                    outcome = "correction" if session.demonstration_type == "correction" else "success"
-                    print(session.save(outcome, roots[outcome]))
-                elif command == "discard":
-                    if starter.active:
-                        print(starter.cancel("user_discard"))
-                    print(session.discard())
-                elif command == "quit":
-                    if starter.active:
-                        print(starter.cancel("user_quit"))
-                    if session.state == "RECORDING":
-                        timing, history = node.history_snapshot()
-                        print(session.finish_aligned(history, timing))
-                        history = None
-                    quit_requested, message = session.request_quit()
-                    print(message)
-                    if quit_requested:
+                        try:
+                            emit(starter.request(timing, history))
+                        except IntegrityError as exc:
+                            emit(f"[시작 검사] 실패: {exc.reason}: {exc.details}")
+                        finally:
+                            history = None  # Do not retain an RGB history snapshot in READY/REVIEW.
+                    elif command == "stop":
+                        if starter.active:
+                            emit(starter.cancel("user_stop"))
+                        elif session.state == "RECORDING":
+                            timing, history = node.history_snapshot()
+                            emit(session.finish_aligned(history, timing))
+                            history = None
+                        else:
+                            emit(session.stop())
+                    elif command == "correction":
+                        emit(session.mark_correction(raw_command))
+                    elif command == "success":
+                        outcome = "correction" if session.demonstration_type == "correction" else "success"
+                        if frontend:
+                            frontend.update(session, starter, node, phase="SAVING", force=True)
+                        emit(session.save(outcome, roots[outcome]))
+                    elif command == "discard":
+                        if starter.active:
+                            emit(starter.cancel("user_discard"))
+                        emit(session.discard())
+                    elif command == "quit":
+                        if starter.active:
+                            emit(starter.cancel("user_quit"))
+                        if session.state == "RECORDING":
+                            timing, history = node.history_snapshot()
+                            emit(session.finish_aligned(history, timing))
+                            history = None
+                        quit_requested, message = session.request_quit()
+                        emit(message)
+                        if quit_requested:
+                            break
+                    elif raw_command == "__eof__":
+                        if starter.active:
+                            emit(starter.cancel("input_eof"))
+                        quit_requested = True
+                        if session.path is not None:
+                            emit(f"[입력 종료] Pending : {session.path}")
                         break
-                elif raw_command == "__eof__":
-                    if starter.active:
-                        print(starter.cancel("input_eof"))
-                    quit_requested = True
-                    if session.path is not None:
-                        print(f"[입력 종료] Pending : {session.path}")
-                    break
-                elif raw_command:
-                    print("[명령 오류] 알 수 없는 명령입니다. help로 명령어를 확인하세요.")
+                    elif raw_command:
+                        emit("[명령 오류] 알 수 없는 명령입니다. help로 명령어를 확인하세요.")
 
             if quit_requested:
                 break
@@ -991,7 +1021,7 @@ def main() -> int:
                 message = starter.poll(session, history, timing)
                 history = None
                 if message:
-                    print(message)
+                    emit(message)
 
             now_ns = time.monotonic_ns()
             schedule = session.deadline.consume(now_ns) if session.state == "RECORDING" else None
@@ -1000,7 +1030,7 @@ def main() -> int:
                 session.record_aligned(history, timing, schedule)
                 history = None
                 if not session.integrity["valid"]:
-                    print(ui.invalid(session))
+                    emit(ui.invalid(session))
             else:
                 delay = min(period / 4, 0.01)
                 if session.state == "RECORDING":
@@ -1008,19 +1038,21 @@ def main() -> int:
                 elif starter.active:
                     delay = min(delay, max(0.0, (starter.release_ns - time.monotonic_ns()) / NANOSECONDS))
                 time.sleep(delay)
+            if frontend:
+                frontend.update(session, starter, node)
     except KeyboardInterrupt:
-        print("[중단] 녹화를 중단했습니다.")
+        emit("[중단] 녹화를 중단했습니다.")
     except (ValueError, OSError) as exc:
         if not collection:
             raise
         session.save_failed = True
-        print(ui.panel("수집 차단 - Collection Blocked", [f"오류 : {exc}", f"Pending : {session.path or pending_root}",
+        emit(ui.panel("수집 차단 - Collection Blocked", [f"오류 : {exc}", f"Pending : {session.path or pending_root}",
                     "복구 : " + ui.recovery_command(collection, pending_root)]))
     finally:
         if starter.active:
-            print(starter.cancel("recorder_exit"))
+            emit(starter.cancel("recorder_exit"))
         if session.path is not None and not quit_requested:
-            print(f"Pending : {session.path}")
+            emit(f"Pending : {session.path}")
         try:
             node.destroy_node()
         finally:

@@ -42,6 +42,7 @@ Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dr
 이는 실물 모터까지 ACT로 연결해 검증했다는 뜻이 아니다.
 
 - 일반 `s → r → o`, 교정 `s → x → r → o`; x는 녹화를 계속하고 첫 마커를 유지한다.
+- [Recorder GUI](../ai/record/GUI.md)는 Tk 버튼을 동일 엔진에 전달한다. 기존 CLI/wrapper·저장 계약을 유지하며 영상 미리보기·로봇 제어는 없다. GUI 실물/화면 통합 검증은 미완료다.
 - 목표는 L/C/R × A1..A6 × 여섯 Depth의 정상 성공108개다. 원본 ID와 Shuffle은 유지한다.
 - 조건표는 `docs/ACT_108_Episode_Execution_Log_Template.md`를 코드가 직접 읽는다. 이동·수정 금지.
 - `ready`는 제거됐다. s에서 조건·Attempt·선택적 좌표를 확정하고 60ms 시작 검사 후 기록한다.
@@ -60,7 +61,8 @@ Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dr
 | 과거 수동 제어 | 2026-10-02 등의 실물 운용 이력. [Teleop](TELEOP.md), [J6 인계](INDY7_J6_FAULT_HANDOFF.md) | 최신 전체 stack의 실물 인증 |
 | 기존 Recorder 실물 입력 Pilot | 사용자 실측과 `outputs/act_recorder_pilot_20261031/success` 저장 기록: 5 Episode/3264 frames/20FPS. sidecar는 saved·success·integrity valid | 정식108개 완료·최신 Core/Correction·물리적 파지 성공. 이번에는 영상을 재검증하지 않음 |
 | 최신 Core-108/Correction | 정리 후 CPU 회귀의120개, 원본108개 합성 저장·중단/부분 저장·reconcile·교정 마커 포함 | 최신 실물 통합 검증은 미완료 |
-| ACT CPU 연결 | 2026-11-01 재실행 `482 passed / 0 failed / CUDA2 deselected`, 공식 소형 ACT3-step·Checkpoint·추론·Mock·평가 | 최종 모델 수렴·실물 ACT 성능 |
+| ACT CPU 연결 | 2026-11-01 GUI 디자인 개편 후 `547 passed / 0 failed / CUDA2 deselected` (기존482+GUI65), 공식 소형 ACT3-step·Checkpoint·추론·Mock·평가 | 최종 모델 수렴·실물 ACT 성능 |
+| Recorder GUI | 실험용 네 영역 UI·기술 정보 팝업, GUI65개 검증. 실제 Tk에서 Fake 상태로 렌더링·최소860×640/기본960×660·긴 Depth/오류 경계 확인. 엔진·bridge 유지 | ROS 실수신 부하·실물 운용 미검증 |
 | 과거 CUDA 합성 연결 | 별도 `outputs/act_final_offline_20261031T025706Z_09a8f399/verification.json`의 CPU/CUDA3-step 기록 | 최신482개에서 CUDA 재검증한 결과가 아님 |
 | 실제 ROS 입력 ACT 추론 | CLI 구현·fake ROS 검증 존재; 별도 실물 관측 추론 실행 완료 근거는 미확인 | Recorder Pilot을 추론 검증으로 대체하지 않음 |
 | ACT 실제 모터 실행·Real Home | 미검증·CLI/API 잠금 유지 | Mock Task/Home 성공으로 해제하지 않음 |
@@ -68,6 +70,8 @@ Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dr
 직전482개 증거는 `tmp/act_compat_pe61fnjr/{verification.json,results.xml,suite.log}`에 보존했다.
 구형 합성 Dataset·Checkpoint·캐시는 제거하고 실행/평가 메타데이터·로그는 `evidence/`에 남겼다.
 이번 정리 후 결과는 `tmp/act_cleanup_1jj8_97d/{verification.json,results.xml,suite.log}`에 보존했다.
+이후 GUI 추가 전체 회귀510개와 최종 GUI30개 기록은 `tmp/act_gui_djcd2anu/{verification.json,final_results.xml,final_suite.log,gui_final_release.xml}`에 보존한다. 고유 테스트는512개다.
+이후 디자인 개편 최종547개 회귀·보호 대조·Fake Tk 화면은 `tmp/act_gui_design_eten3gqc/`에 보존한다. 상세 사용법은 GUI 문서가 기준이다.
 CPU 전체 회귀 결과와 복구 커밋은 [정리 기록](PROJECT_CLEANUP_AUDIT.md)의 최신 항목을 따른다.
 벤치마크는 일반 pytest와 별개다. 가짜 ROS QoS 설정과 임시 경로를 보완해 3초 합성 실행으로 58 frames·시간 무결성 valid를 확인했다.
 

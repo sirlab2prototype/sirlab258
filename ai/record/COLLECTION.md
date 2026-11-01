@@ -11,6 +11,7 @@ cd /home/sirlab2/sirlab258
 ```
 
 같은 명령으로 재개한다. 실제 장비 운용·workspace 검증은 별도 승인 후 진행한다.
+버튼으로 조작하려면 [데스크톱 GUI](GUI.md)를 사용한다. 동일 엔진·Collection을 사용하며 기존 wrapper는 변경하지 않는다.
 SSH에서 한 줄 입력 후 Enter로 전달하며 화면 지우기나 주기적 화면 갱신은 없다.
 환경 경로·전체 시간 설정·장문의 배치 설명은 일반 시작 화면에 출력하지 않는다.
 Recorder 프로세스 안에서 공개 로깅 API로 Dataset 진행 막대와 정보성 인코더 로그를 제한한다.
@@ -138,7 +139,7 @@ demonstration.correction:
   input_received_system_time_ns
   command_processed_monotonic_ns
   boundary_monotonic_ns
-  boundary_source = stdin_line_received | command_processing_fallback
+  boundary_source = stdin_line_received | gui_button_received | command_processing_fallback
   start_frame_index
   start_dataset_timestamp_s
   start_reference_monotonic_ns
@@ -149,6 +150,7 @@ start_frame_index는 **0부터 시작**하며 timestamp는 기존 LeRobot의 fra
 참조 시각과 입력 수신 시각은 별도 필드다. timestamp를 물리적 실패 경과 시간으로 해석하지 않는다.
 직접 API 호출처럼 stdin 시각이 없으면 처리 시각을 쓰고 fallback임을 명시한다.
 실제 터미널 명령에는 수신 시각이 있다. 대응 프레임이 하나도 없으면 Correction 저장을 거부한다.
+GUI는 Tk 버튼 콜백 시각을 기록하며 gui_button_received로 구분한다. 기존 필드/타임라인과 입력 시각 검증은 동일하다.
 저장 전에 timing 행·첫 대응 프레임·timestamp를 대조해 손상이나 불일치를 차단한다.
 
 전체 Episode를 보존하므로 교정 전 실패 유도 구간도 남는다. 이번에는 학습기·ACT 모델·혼합

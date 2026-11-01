@@ -21,7 +21,7 @@ def validate(marker, frames, fps, rows=None):
             marker.get("frame_index_origin") != 0):
         raise ValueError("correction_input_clock_invalid")
     source = marker.get("boundary_source")
-    if source == "stdin_line_received":
+    if source in ("stdin_line_received", "gui_button_received"):
         if type(received) is not int or boundary != received:
             raise ValueError("correction_input_clock_invalid")
     elif source != "command_processing_fallback" or received is not None or boundary != processed:
