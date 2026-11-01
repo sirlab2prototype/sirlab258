@@ -22,27 +22,30 @@ Correction 1개이며 조건 정의108개와 실제 수집 완료 개수는 다�
 
 ## 새 정식 Collection 생성과 재개
 
-저장소 루트에서 사용할 명령 예시다. 장비 운영은 별도 승인 후 수행한다.
+새 데이터셋은 `ai/record/plans/<dataset_id>.json`으로 정의한다. [사용 설명서](../act-record.md)를 따른다.
+`./act-record`는 선택 화면을 열고, 최초 열기에서 Collection을 생성한다. 아래는 생성한 Collection의 CLI 재개 예시다.
+장비 운영은 별도 승인 후 수행한다.
 
 ```bash
 ./act-record --collection-dir outputs/preserved/datasets/act1_108_001
 ```
 
-처음 사용할 때 지정한 경로에 새 장부를 만든다. 나중에도 같은 경로와 명령을 사용하면
-기존 장부·Dataset을 검증해 재개한다. Collection 모드는 기존 코드가 resume을 설정한다.
+최초에는 선택 화면에서 정의 JSON을 기준으로 새 장부를 만든다. 나중에는 같은 경로로
+기존 장부·Dataset을 검증해 재개한다. 위 CLI 명령은 이미 생성된 Collection의 재개 예시다.
+빈 경로를 CLI로 직접 지정하면 종전 Core-108 모드이므로 사용자 정의 계획 생성에는 쓰지 않는다.
 GUI에서도 `--collection-dir outputs/preserved/datasets/act1_108_001`을 사용한다.
 CLI와 GUI를 동일 Collection에 동시에 연결하지 않는다.
 
 Collection은 `collection.json`, `receipts/`, `success/`, `correction/`, 과거 `failure/`,
 `pending/`을 한 단위로 관리한다. 최초 생성 이후 이동하거나 이름을 변경하지 않는다.
-경로를 생략했을 때의 기존 기본값은 변경하지 않았다. 이전 문서의
+명시 CLI의 기존 저장 기본값은 유지하며, 인자 없는 wrapper/GUI는 관리 화면을 연다. 이전 문서의
 `datasets/indy7_act_core108`은 기존 경로 예시이며 새 정식 수집에는 위 경로를 명시한다.
 
 이름은 `act<행동번호>_<계획조건수 3자리>_<수집본 일련번호 3자리>`다.
 예: `act1_108_001`, `act1_055_001`, `act1_055_002`, `act2_108_001`.
 조건 수는 계획값이며 실제 Success/Correction 수는 장부와 Dataset 메타데이터로 확인한다.
-현재 Recorder 조건표는108개로 고정돼 있다. `055` 이름만으로55조건 계획을 지원하지 않는다.
-55조건·다른 행동 계획 지원은 별도 검토하며 원본108개 조건표는 변경하지 않는다.
+기본 Core-108의 원본 조건표는 유지하며, 사용자 정의 계획은 실제 조건 목록을 JSON으로 제공한다.
+`055` 이름만으로55개 조건을 만들지 않으며 Core-55 조건표는 기본 제공하지 않는다.
 
 향후 학습 입력은 해당 Collection의 `success/`이며 Collection 루트가 아니다.
 Correction 학습·다중 Dataset 학습은 현재 지원하지 않는다.

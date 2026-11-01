@@ -16,20 +16,24 @@ def counts(collection):
     if collection is None:
         return []
     stats = collection.stats()
-    return [f"정상 시연 : {stats['success']} / 108", f"교정 시연 : {stats['correction']}",
-            f"남은 조건 : {108-stats['success']}"]
+    return [f"정상 시연 : {stats['success']} / {collection.total}", f"교정 시연 : {stats['correction']}",
+            f"남은 조건 : {collection.total-stats['success']}"]
 
 
 def condition(collection, title="현재 수집 조건", with_status=True):
     view = collection.condition_view()
     if view is None:
-        return panel(title, ["108개 정상 시연 수집을 모두 완료했습니다."])
-    lines = [f"수집 순서 : {view['collection_order']:03d} / 108",
+        return panel(title, [f"{collection.total}개 정상 시연 수집을 모두 완료했습니다."])
+    lines = [f"수집 순서 : {view['collection_order']:03d} / {collection.total}",
              f"조건 ID   : {view['condition_id']:03d}", f"시도      : {view['attempt_number']}회차", "",
              f"바구니 위치 : {view['position']}", f"바구니 회전 : {view['yaw']}", f"바구니 깊이 : {view['depth']}", ""]
+    if collection.custom:
+        lines = [f"수집 순서 : {view['collection_order']:03d} / {collection.total}",
+                 f"조건 ID   : {view['condition_id']:03d}", f"시도      : {view['attempt_number']}회차",
+                 view['description'], json.dumps(view['fields'], ensure_ascii=False), ""]
     if with_status:
         lines.extend([f"[현재 상태] {STATUS.get(view['status'], view['status'])}", ""])
-    lines.append("바구니 배치 후 s")
+    lines.append("조건에 맞게 준비 후 s" if collection.custom else "바구니 배치 후 s")
     return panel(title, lines)
 
 
@@ -88,7 +92,7 @@ def saved(session, outcome, index, condition_id, leftover=None):
              f"Dataset : {'Correction' if outcome == 'correction' else 'Success'}", f"Episode : {index}"]
     if session.collection:
         stats = session.collection.stats()
-        lines.extend(["", f"정상 시연 : {stats['success']} / 108"])
+        lines.extend(["", f"정상 시연 : {stats['success']} / {session.collection.total}"])
         if outcome == "correction":
             lines.append(f"교정 시연 : {stats['correction']}")
     result = panel("저장 완료", lines)
@@ -131,7 +135,7 @@ def invalid(session):
 def help_text():
     return panel("명령어 안내", ["s : 배치·시도 확정 및 녹화 시작", "x : 녹화 중 교정 시연 전환", "r : 녹화 종료 및 REVIEW",
         "o : 유형에 맞는 Dataset 저장 확정", "d : 시연 폐기", "q : 종료", "progress : 수집 현황",
-        "progress all : 전체 108개 조건", "history ID : 조건별 시도 요약", "history ID detail : 세부 장부 JSON",
+        "progress all : 전체 계획 조건", "history ID : 조건별 시도 요약", "history ID detail : 세부 장부 JSON",
         "condition ID : 미완료 조건 선택", "placement key=value : 선택적 좌표 입력 (cm, degree; 미입력=null)",
         "result key=value : REVIEW 결과·품질·단계별 메모", "help : 명령어 안내", "guide : 배치 기준 안내"])
 

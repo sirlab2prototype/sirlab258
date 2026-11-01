@@ -833,6 +833,8 @@ def main(argv=None, *, frontend=None) -> int:
             emit(ui.panel("수집 차단 - Collection Blocked", [f"오류 : {exc}", f"Pending : {directory / 'pending'}",
                 "복구 : .venv-act/bin/python -m ai.record.collection reconcile --collection-dir " + shlex.quote(str(directory))]))
             return 1
+        if "definition" in collection.state:
+            args.task = collection.state["definition"]["action"]["description"]
         args.root, args.failure_root = collection.roots["success"], collection.roots["failure"]
         args.pending_root = collection.pending_root
         args.correction_root = collection.roots["correction"]

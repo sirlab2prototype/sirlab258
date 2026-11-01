@@ -1,7 +1,8 @@
 # Indy7 ACT Recorder 데스크톱 GUI
 
-Core-108 수집을 기존 Recorder 엔진의 버튼 입력으로 사용한다. 로봇 제어·장비 launch·
-Home·Gripper 버튼은 없다. 기존 CLI와 실행 wrapper는 그대로다.
+Indy7 ACT 수집을 기존 Recorder 엔진의 버튼 입력으로 사용한다. 로봇 제어·장비 launch·
+Home·Gripper 버튼은 없다. 경로 없는 실행은 [파일 기반 데이터셋 선택 화면](../../act-record.md)을 연다.
+명시한 `--collection-dir` 실행과 기존 녹화 엔진을 유지한다.
 
 새 정식 Collection 경로·명명·재개 방법은 [outputs 관리](../../docs/OUTPUTS.md)를 따른다.
 
@@ -14,7 +15,9 @@ cd /home/sirlab2/sirlab258
 source /opt/ros/jazzy/setup.bash
 source ros2_ws/install/setup.bash
 source scripts/activate_act.sh
-python -m ai.record.gui --collection-dir outputs/preserved/datasets/act1_108_001
+python -m ai.record.gui
+# 이미 생성한 Collection으로 바로 들어가기:
+# python -m ai.record.gui --collection-dir outputs/preserved/datasets/act1_108_001
 ```
 
 이는 실행 방법이며 실물 연결 승인이 아니다. [현재 안전 제한](../../docs/PROJECT_CONTEXT.md)을
@@ -30,7 +33,7 @@ Tk 창·ROS·Dataset을 시작하지 않는다. 프로젝트에서 이미 쓰는
 
 기본 화면은 네 영역만 표시한다.
 
-1. 한 줄 진행 현황: 정상 n/108 · 교정 수 · 정상 기준 진행률.
+1. 한 줄 진행 현황: 정상 n/계획 조건 수 · 교정 수 · 정상 기준 진행률.
 2. 배치 조건: 위치·회전·깊이를 강조하고 순서·ID·Attempt는 보조 정보로 표시.
 3. 상태 표시등/텍스트 · `00:00` 녹화 시간 · 일반/교정 모드 · 다섯 조작 버튼.
    REVIEW/SAVING에서는 저장 대상 Success/Correction을 명시한다.
@@ -43,12 +46,19 @@ Camera A/B 등을 구분한 한국어 요약과 원본 진단을 제공한다.
 INVALID/SAVE FAILED/Collection Blocked와 이전 Pending 안내는 기본 화면에서도 별도 안내한다.
 저장이 확인된 뒤의 staging 정리 경고는 저장 실패로 오인하지 않도록 구분한다.
 
-기본 창은 **960×660**, 최소 **860×640**, 최대 콘텐츠 폭은 **1000px**다.
-1024×768 수준에서도 기본 화면을 스크롤하지 않고 모든 조작 버튼에 접근할 수 있다.
-큰 창에서는 여백만 늘린다. 긴 한글/Depth 안내는 줄바꿈하며 오류 영역도 확보한다.
-Noto Sans CJK KR을 우선 선택하고 설치된 한글 폰트를 순서대로 사용한다.
-폰트는 픽셀 단위(본문14, 보조12, 배치20, 상태22)로 지정해 데스크톱 Tk2배 배율이
-모든 글씨를 다시 확대하지 않게 한다. 다른 앱/시스템 DPI·폰트 설정은 변경하지 않는다.
+선택창과 녹화창 모두 QHD에서 초기 **1300×820**을 목표로 한다. Tk 화면 크기와
+창 관리자가 알려 주는 최대 영역에서 테두리·작업 표시줄 여유를 빼고 작은 화면에 맞춰 줄인다.
+녹화창 최소 크기는 보통860×640이며 그보다 작은 화면에서는 초기 가용 크기로 제한한다.
+
+공통 `gui_scaling.py`의 `UIScale`을 사용한다.960×660은 배율1의 설계 기준이며 초기 창 크기가 아니다.
+수동 확대·축소 시 가로·세로 중 작은 비율을 따라 글꼴·버튼·간격·팝업을0.55~3배로 조절한다.
+기존 화면 범위의 배율은 유지하고 저해상도에서 더 줄일 수 있게 했다. 콘텐츠 폭을1000px로 고정하지 않는다.
+선택창의 제목·설명·목록 글꼴·헤더·행 높이·열 너비·버튼·안내 메시지도 같은 배율로 조절한다.
+표는 남은 공간을 채우고 긴 값은 가로 스크롤·상세 영역을 통해 확인한다.
+
+긴 한글/Depth 안내는 줄바꿈하며 오류 영역을 확보한다. Noto Sans CJK KR을 우선 선택하고
+설치된 한글 폰트를 순서대로 사용한다. 픽셀 단위 글꼴로 Tk DPI의 중복 확대를 막는다.
+다른 앱/시스템 DPI·폰트 설정은 변경하지 않는다.
 대기=회색, 녹화=초록, 검토/시작 검사=노랑, 저장=파랑, 오류=빨강이며 텍스트를 함께 표시한다.
 
 - 진행률·조건 ID·수집 순서·Attempt·한글 위치/회전/깊이는 실제 Collection에서 읽는다.

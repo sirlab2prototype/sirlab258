@@ -1,0 +1,774 @@
+{
+  "version": 1,
+  "dataset_id": "act1_108_001",
+  "robot": "indy7",
+  "policy": "act",
+  "action": {
+    "id": "act1",
+    "description": "Grasp basket handle from shelf and place on table"
+  },
+  "plan": {
+    "version": 1,
+    "id": "core108",
+    "description": "기존 바구니 Core-108 원본 순서",
+    "kind": "core108",
+    "conditions": [
+      {
+        "condition_id": 108,
+        "collection_order": 1,
+        "position_region": "R",
+        "yaw_bin": "A6",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 37,
+        "collection_order": 2,
+        "position_region": "C",
+        "yaw_bin": "A1",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 19,
+        "collection_order": 3,
+        "position_region": "L",
+        "yaw_bin": "A4",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 96,
+        "collection_order": 4,
+        "position_region": "R",
+        "yaw_bin": "A4",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 76,
+        "collection_order": 5,
+        "position_region": "R",
+        "yaw_bin": "A1",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 13,
+        "collection_order": 6,
+        "position_region": "L",
+        "yaw_bin": "A3",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 99,
+        "collection_order": 7,
+        "position_region": "R",
+        "yaw_bin": "A5",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 10,
+        "collection_order": 8,
+        "position_region": "L",
+        "yaw_bin": "A2",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 28,
+        "collection_order": 9,
+        "position_region": "L",
+        "yaw_bin": "A5",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 81,
+        "collection_order": 10,
+        "position_region": "R",
+        "yaw_bin": "A2",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 12,
+        "collection_order": 11,
+        "position_region": "L",
+        "yaw_bin": "A2",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 6,
+        "collection_order": 12,
+        "position_region": "L",
+        "yaw_bin": "A1",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 68,
+        "collection_order": 13,
+        "position_region": "C",
+        "yaw_bin": "A6",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 46,
+        "collection_order": 14,
+        "position_region": "C",
+        "yaw_bin": "A2",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 22,
+        "collection_order": 15,
+        "position_region": "L",
+        "yaw_bin": "A4",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 21,
+        "collection_order": 16,
+        "position_region": "L",
+        "yaw_bin": "A4",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 86,
+        "collection_order": 17,
+        "position_region": "R",
+        "yaw_bin": "A3",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 20,
+        "collection_order": 18,
+        "position_region": "L",
+        "yaw_bin": "A4",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 104,
+        "collection_order": 19,
+        "position_region": "R",
+        "yaw_bin": "A6",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 11,
+        "collection_order": 20,
+        "position_region": "L",
+        "yaw_bin": "A2",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 95,
+        "collection_order": 21,
+        "position_region": "R",
+        "yaw_bin": "A4",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 18,
+        "collection_order": 22,
+        "position_region": "L",
+        "yaw_bin": "A3",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 56,
+        "collection_order": 23,
+        "position_region": "C",
+        "yaw_bin": "A4",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 66,
+        "collection_order": 24,
+        "position_region": "C",
+        "yaw_bin": "A5",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 50,
+        "collection_order": 25,
+        "position_region": "C",
+        "yaw_bin": "A3",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 105,
+        "collection_order": 26,
+        "position_region": "R",
+        "yaw_bin": "A6",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 62,
+        "collection_order": 27,
+        "position_region": "C",
+        "yaw_bin": "A5",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 3,
+        "collection_order": 28,
+        "position_region": "L",
+        "yaw_bin": "A1",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 14,
+        "collection_order": 29,
+        "position_region": "L",
+        "yaw_bin": "A3",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 35,
+        "collection_order": 30,
+        "position_region": "L",
+        "yaw_bin": "A6",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 72,
+        "collection_order": 31,
+        "position_region": "C",
+        "yaw_bin": "A6",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 101,
+        "collection_order": 32,
+        "position_region": "R",
+        "yaw_bin": "A5",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 29,
+        "collection_order": 33,
+        "position_region": "L",
+        "yaw_bin": "A5",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 57,
+        "collection_order": 34,
+        "position_region": "C",
+        "yaw_bin": "A4",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 103,
+        "collection_order": 35,
+        "position_region": "R",
+        "yaw_bin": "A6",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 7,
+        "collection_order": 36,
+        "position_region": "L",
+        "yaw_bin": "A2",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 59,
+        "collection_order": 37,
+        "position_region": "C",
+        "yaw_bin": "A4",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 79,
+        "collection_order": 38,
+        "position_region": "R",
+        "yaw_bin": "A2",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 102,
+        "collection_order": 39,
+        "position_region": "R",
+        "yaw_bin": "A5",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 63,
+        "collection_order": 40,
+        "position_region": "C",
+        "yaw_bin": "A5",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 33,
+        "collection_order": 41,
+        "position_region": "L",
+        "yaw_bin": "A6",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 49,
+        "collection_order": 42,
+        "position_region": "C",
+        "yaw_bin": "A3",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 94,
+        "collection_order": 43,
+        "position_region": "R",
+        "yaw_bin": "A4",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 26,
+        "collection_order": 44,
+        "position_region": "L",
+        "yaw_bin": "A5",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 48,
+        "collection_order": 45,
+        "position_region": "C",
+        "yaw_bin": "A2",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 52,
+        "collection_order": 46,
+        "position_region": "C",
+        "yaw_bin": "A3",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 44,
+        "collection_order": 47,
+        "position_region": "C",
+        "yaw_bin": "A2",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 98,
+        "collection_order": 48,
+        "position_region": "R",
+        "yaw_bin": "A5",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 30,
+        "collection_order": 49,
+        "position_region": "L",
+        "yaw_bin": "A5",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 38,
+        "collection_order": 50,
+        "position_region": "C",
+        "yaw_bin": "A1",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 8,
+        "collection_order": 51,
+        "position_region": "L",
+        "yaw_bin": "A2",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 77,
+        "collection_order": 52,
+        "position_region": "R",
+        "yaw_bin": "A1",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 32,
+        "collection_order": 53,
+        "position_region": "L",
+        "yaw_bin": "A6",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 84,
+        "collection_order": 54,
+        "position_region": "R",
+        "yaw_bin": "A2",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 5,
+        "collection_order": 55,
+        "position_region": "L",
+        "yaw_bin": "A1",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 75,
+        "collection_order": 56,
+        "position_region": "R",
+        "yaw_bin": "A1",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 88,
+        "collection_order": 57,
+        "position_region": "R",
+        "yaw_bin": "A3",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 89,
+        "collection_order": 58,
+        "position_region": "R",
+        "yaw_bin": "A3",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 2,
+        "collection_order": 59,
+        "position_region": "L",
+        "yaw_bin": "A1",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 47,
+        "collection_order": 60,
+        "position_region": "C",
+        "yaw_bin": "A2",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 36,
+        "collection_order": 61,
+        "position_region": "L",
+        "yaw_bin": "A6",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 15,
+        "collection_order": 62,
+        "position_region": "L",
+        "yaw_bin": "A3",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 80,
+        "collection_order": 63,
+        "position_region": "R",
+        "yaw_bin": "A2",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 43,
+        "collection_order": 64,
+        "position_region": "C",
+        "yaw_bin": "A2",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 78,
+        "collection_order": 65,
+        "position_region": "R",
+        "yaw_bin": "A1",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 69,
+        "collection_order": 66,
+        "position_region": "C",
+        "yaw_bin": "A6",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 64,
+        "collection_order": 67,
+        "position_region": "C",
+        "yaw_bin": "A5",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 106,
+        "collection_order": 68,
+        "position_region": "R",
+        "yaw_bin": "A6",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 25,
+        "collection_order": 69,
+        "position_region": "L",
+        "yaw_bin": "A5",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 55,
+        "collection_order": 70,
+        "position_region": "C",
+        "yaw_bin": "A4",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 54,
+        "collection_order": 71,
+        "position_region": "C",
+        "yaw_bin": "A3",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 1,
+        "collection_order": 72,
+        "position_region": "L",
+        "yaw_bin": "A1",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 107,
+        "collection_order": 73,
+        "position_region": "R",
+        "yaw_bin": "A6",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 82,
+        "collection_order": 74,
+        "position_region": "R",
+        "yaw_bin": "A2",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 24,
+        "collection_order": 75,
+        "position_region": "L",
+        "yaw_bin": "A4",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 74,
+        "collection_order": 76,
+        "position_region": "R",
+        "yaw_bin": "A1",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 31,
+        "collection_order": 77,
+        "position_region": "L",
+        "yaw_bin": "A6",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 17,
+        "collection_order": 78,
+        "position_region": "L",
+        "yaw_bin": "A3",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 4,
+        "collection_order": 79,
+        "position_region": "L",
+        "yaw_bin": "A1",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 61,
+        "collection_order": 80,
+        "position_region": "C",
+        "yaw_bin": "A5",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 92,
+        "collection_order": 81,
+        "position_region": "R",
+        "yaw_bin": "A4",
+        "depth_coverage": "Front-Middle"
+      },
+      {
+        "condition_id": 40,
+        "collection_order": 82,
+        "position_region": "C",
+        "yaw_bin": "A1",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 45,
+        "collection_order": 83,
+        "position_region": "C",
+        "yaw_bin": "A2",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 93,
+        "collection_order": 84,
+        "position_region": "R",
+        "yaw_bin": "A4",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 87,
+        "collection_order": 85,
+        "position_region": "R",
+        "yaw_bin": "A3",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 65,
+        "collection_order": 86,
+        "position_region": "C",
+        "yaw_bin": "A5",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 73,
+        "collection_order": 87,
+        "position_region": "R",
+        "yaw_bin": "A1",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 85,
+        "collection_order": 88,
+        "position_region": "R",
+        "yaw_bin": "A3",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 100,
+        "collection_order": 89,
+        "position_region": "R",
+        "yaw_bin": "A5",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 51,
+        "collection_order": 90,
+        "position_region": "C",
+        "yaw_bin": "A3",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 41,
+        "collection_order": 91,
+        "position_region": "C",
+        "yaw_bin": "A1",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 39,
+        "collection_order": 92,
+        "position_region": "C",
+        "yaw_bin": "A1",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 90,
+        "collection_order": 93,
+        "position_region": "R",
+        "yaw_bin": "A3",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 91,
+        "collection_order": 94,
+        "position_region": "R",
+        "yaw_bin": "A4",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 42,
+        "collection_order": 95,
+        "position_region": "C",
+        "yaw_bin": "A1",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 97,
+        "collection_order": 96,
+        "position_region": "R",
+        "yaw_bin": "A5",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 83,
+        "collection_order": 97,
+        "position_region": "R",
+        "yaw_bin": "A2",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 23,
+        "collection_order": 98,
+        "position_region": "L",
+        "yaw_bin": "A4",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 71,
+        "collection_order": 99,
+        "position_region": "C",
+        "yaw_bin": "A6",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 16,
+        "collection_order": 100,
+        "position_region": "L",
+        "yaw_bin": "A3",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 70,
+        "collection_order": 101,
+        "position_region": "C",
+        "yaw_bin": "A6",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 34,
+        "collection_order": 102,
+        "position_region": "L",
+        "yaw_bin": "A6",
+        "depth_coverage": "Middle-Back"
+      },
+      {
+        "condition_id": 53,
+        "collection_order": 103,
+        "position_region": "C",
+        "yaw_bin": "A3",
+        "depth_coverage": "Back"
+      },
+      {
+        "condition_id": 9,
+        "collection_order": 104,
+        "position_region": "L",
+        "yaw_bin": "A2",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 60,
+        "collection_order": 105,
+        "position_region": "C",
+        "yaw_bin": "A4",
+        "depth_coverage": "Random"
+      },
+      {
+        "condition_id": 67,
+        "collection_order": 106,
+        "position_region": "C",
+        "yaw_bin": "A6",
+        "depth_coverage": "Front"
+      },
+      {
+        "condition_id": 27,
+        "collection_order": 107,
+        "position_region": "L",
+        "yaw_bin": "A5",
+        "depth_coverage": "Middle"
+      },
+      {
+        "condition_id": 58,
+        "collection_order": 108,
+        "position_region": "C",
+        "yaw_bin": "A4",
+        "depth_coverage": "Middle-Back"
+      }
+    ]
+  }
+}

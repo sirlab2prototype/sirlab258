@@ -7,4 +7,9 @@ source /opt/ros/jazzy/setup.bash
 source "$ROOT/ros2_ws/install/setup.bash"
 source "$ROOT/scripts/activate_act.sh" >/dev/null
 
+if [[ $# -eq 0 ]]; then
+  cd "$ROOT"
+  exec python -m ai.record.gui
+fi
+
 exec python "$ROOT/ai/record/indy7_act_record.py" "$@"

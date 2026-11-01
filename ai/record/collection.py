@@ -64,6 +64,21 @@ def load_plan(path=PLAN):
     return sorted(rows, key=lambda r: r["collection_order"])
 
 
+def saved_conditions(state, plan=None):
+    """Validate additive snapshots without modifying legacy ledger/receipt bytes."""
+    from ai.record.plans import validate_definition, definition_hash
+    if "definition" in state:
+        definition = validate_definition(state["definition"])
+        if definition_hash(definition) != state.get("definition_sha256"):
+            raise CollectionError("Collection definition fingerprint mismatch")
+        conditions = definition["plan"]["conditions"]
+    else:
+        conditions = load_plan(plan or PLAN)
+    if state["conditions"] != conditions or (plan is not None and conditions != load_plan(plan)):
+        raise CollectionError("Plan/order changed; inspect before continuing")
+    return conditions
+
+
 def digest(path):
     result = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -170,7 +185,7 @@ def dataset_inventory(root):
 
 
 class Collection:
-    def __init__(self, directory, plan=PLAN, *, recovery=False):
+    def __init__(self, directory, plan=None, *, recovery=False, definition=None):
         self.directory = Path(directory).expanduser().resolve()
         for relative in ("outputs/act_recorder_pilot_20261031",
                          "outputs/temporary/verification/act_recorder_pilot_20261031"):
@@ -195,16 +210,29 @@ class Collection:
             raise CollectionError("Collection already open by another writer") from None
         self.blocked = False
         try:
-            conditions = load_plan(plan)
             if self.path.exists():
                 self.state = json.loads(self.path.read_text())
+                conditions = saved_conditions(self.state, plan)
+                if (definition is not None and definition != self.state.get("definition")):
+                    raise CollectionError("Collection definition changed")
+                if self.state.get("definition", {}).get("dataset_id", self.directory.name) != self.directory.name:
+                    raise CollectionError("Dataset ID/location mismatch")
                 if self.state["conditions"] != conditions or self.state["directory"] != str(self.directory):
                     raise CollectionError("Plan/order or collection location changed; inspect before continuing")
             else:
                 if any(path.exists() for path in [*self.roots.values(), self.pending_root]):
                     raise CollectionError("Existing data without collection ledger cannot be adopted automatically")
+                from ai.record.plans import validate_definition, definition_hash
+                definition = validate_definition(definition) if definition is not None else None
+                if definition is not None and definition["dataset_id"] != self.directory.name:
+                    raise CollectionError("Dataset ID/location mismatch")
+                conditions = definition["plan"]["conditions"] if definition else load_plan(plan or PLAN)
+                if plan is not None and conditions != load_plan(plan):
+                    raise CollectionError("Explicit plan differs from saved definition")
                 self.state = {"version": 1, "directory": str(self.directory), "created_at": now(),
                               "conditions": conditions, "attempts": []}
+                if definition is not None:
+                    self.state.update(definition=definition, definition_sha256=definition_hash(definition))
                 self._persist()
             self.current = None
             self.selected = self.state.get("selected_condition_id")
@@ -263,7 +291,7 @@ class Collection:
     def select(self, condition_id):
         if self.current:
             raise CollectionError("Resolve current attempt before selecting another condition")
-        if condition_id not in range(1, 109) or condition_id in self.completed():
+        if condition_id not in {r["condition_id"] for r in self.state["conditions"]} or condition_id in self.completed():
             raise CollectionError("Unknown or already completed Condition ID")
         self.selected = condition_id
         self.state["selected_condition_id"] = condition_id
@@ -277,7 +305,7 @@ class Collection:
             return self.current
         condition = self.condition()
         if condition is None:
-            raise CollectionError("All 108 conditions are complete")
+            raise CollectionError("All collection conditions are complete")
         # Called by s BEFORE capturing its fixed timing reference. No user ready command.
         self.placement["placement_confirmed"] = True
         identity = {**condition, "attempt_number": 1 + sum(a["condition_id"] == condition["condition_id"]
@@ -294,9 +322,7 @@ class Collection:
     def context(self):
         if not self.current:
             raise CollectionError("Condition/attempt must be fixed before starting")
-        return {k: deepcopy(self.current[k]) for k in (
-            "condition_id", "collection_order", "position_region", "yaw_bin", "depth_coverage",
-            "attempt_number", "attempt_id", "created_at", "placement")}
+        return {k: deepcopy(self.current[k]) for k in self.context_keys()}
 
     def recording(self, pending_path):
         self.current.update(status="RECORDING", pending_path=str(pending_path), started_at=now())
@@ -411,10 +437,16 @@ class Collection:
                     raise CollectionError("Video frame count mismatch; do not append")
         return evidence
 
-    @staticmethod
-    def context_keys():
-        return ("condition_id", "collection_order", "position_region", "yaw_bin", "depth_coverage",
-                "attempt_number", "attempt_id", "created_at", "placement")
+    def context_keys(self):
+        return (*self.state["conditions"][0].keys(), "attempt_number", "attempt_id", "created_at", "placement")
+
+    @property
+    def total(self):
+        return len(self.state["conditions"])
+
+    @property
+    def custom(self):
+        return self.state.get("definition", {}).get("plan", {}).get("kind") == "custom"
 
     def receipt_path(self, attempt):
         return self.directory / "receipts" / f"{attempt['attempt_id']}.json"
@@ -422,6 +454,7 @@ class Collection:
     def audit(self, *, allow_saving=False):
         if self.state.get("version") != 1:
             raise CollectionError("Unsupported collection ledger version")
+        saved_conditions(self.state)
         attempts = self.state["attempts"]
         counts = Counter()
         conditions = {c["condition_id"]: c for c in self.state["conditions"]}
@@ -504,12 +537,21 @@ class Collection:
             return None
         number = self.current["attempt_number"] if self.current else 1 + sum(
             a["condition_id"] == row["condition_id"] for a in self.state["attempts"])
+        if self.custom:
+            return {**row, "attempt_number": number, "status": self.current["status"] if self.current else "READY",
+                    "position": row["description"],
+                    "yaw": json.dumps(row["fields"], ensure_ascii=False), "depth": "—"}
         return {**row, "attempt_number": number, "status": self.current["status"] if self.current else "READY",
                 "position": f"{REGION_LABELS[row['position_region']]} ({row['position_region']})",
                 "yaw": f"{YAW_LABELS[row['yaw_bin']]} ({row['yaw_bin']})",
                 "depth": f"{DEPTH_LABELS[row['depth_coverage']]} ({row['depth_coverage']})"}
 
     def display(self, *, all_conditions=False, title="현재 수집 조건", with_status=True):
+        if all_conditions and self.custom:
+            return ui.panel(f"전체 {self.total}개 조건", [
+                f"{r['collection_order']:03d} | {r['condition_id']:03d} | "
+                f"{'완료' if r['condition_id'] in self.completed() else '미완료'} | {r['description']} | "
+                + json.dumps(r['fields'], ensure_ascii=False) for r in self.state['conditions']])
         if all_conditions:
             rows = [f"{r['collection_order']:03d} | {r['condition_id']:03d} | "
                     f"{'완료' if r['condition_id'] in self.completed() else '미완료'} | "
@@ -521,14 +563,14 @@ class Collection:
 
     def progress(self):
         stats = self.stats()
-        lines = [f"정상 시연 : {stats['success']} / 108 ({stats['success']/108*100:.1f}%)",
-                 f"교정 시연 : {stats['correction']}", f"남은 조건 : {108-stats['success']}",
+        lines = [f"정상 시연 : {stats['success']} / {self.total} ({stats['success']/self.total*100:.1f}%)",
+                 f"교정 시연 : {stats['correction']}", f"남은 조건 : {self.total-stats['success']}",
                  f"폐기 시도 : {stats['discard']}"]
         if stats["failure"]:
             lines.append(f"과거 실패 : {stats['failure']}")
         view = self.condition_view()
         if view:
-            lines.extend(["", "[현재 조건]", f"수집 순서 : {view['collection_order']:03d} / 108",
+            lines.extend(["", "[현재 조건]", f"수집 순서 : {view['collection_order']:03d} / {self.total}",
                           f"조건 ID   : {view['condition_id']:03d}", f"시도      : {view['attempt_number']}회차",
                           f"상태      : {ui.STATUS.get(view['status'], view['status'])}", "",
                           "progress all : 전체 조건", f"history {view['condition_id']:03d}  : 조건별 이력"])
@@ -569,8 +611,8 @@ class Collection:
             if len(tokens) not in (2, 3) or (len(tokens) == 3 and tokens[2] != "detail"):
                 raise CollectionError("사용법: history ID [detail]")
             cid = int(tokens[1])
-            if cid not in range(1, 109):
-                raise CollectionError("조건 ID는 1..108입니다")
+            if cid not in {r["condition_id"] for r in self.state["conditions"]}:
+                raise CollectionError("계획에 없는 조건 ID입니다")
             return self.history(cid, detail=len(tokens) == 3)
         if verb == "condition" and len(tokens) == 2:
             self.select(int(tokens[1]))
@@ -607,7 +649,7 @@ class Collection:
         if verb == "help":
             return ui.help_text()
         if verb == "guide":
-            return ui.guide()
+            return ui.panel("수집 계획", [self.state["definition"]["plan"]["description"]]) if self.custom else ui.guide()
         return None
 
 
@@ -616,14 +658,14 @@ def main():
     parser.add_argument("command", choices=("validate-plan", "status", "history", "reconcile"))
     parser.add_argument("condition_id", type=int, nargs="?")
     parser.add_argument("--collection-dir", type=Path, default=DEFAULT_DIRECTORY)
-    parser.add_argument("--plan", type=Path, default=PLAN)
+    parser.add_argument("--plan", type=Path)
     parser.add_argument("--detail", action="store_true", help="history의 세부 JSON")
     args = parser.parse_args()
-    if args.command == "history" and args.condition_id not in range(1, 109):
-        parser.error("history requires a Condition ID from 1 to 108")
+    if args.command == "history" and (args.condition_id is None or args.condition_id < 1):
+        parser.error("history requires a positive Condition ID")
     try:
-        rows = load_plan(args.plan)
         if args.command == "validate-plan":
+            rows = load_plan(args.plan or PLAN)
             print("108 unique IDs/orders; 18 Region × Yaw groups; each contains all 6 depths once. Fixed order:")
             print(" ".join(f"{r['condition_id']:03d}" for r in rows))
             return 0
@@ -631,12 +673,16 @@ def main():
             # Atomic snapshot reads work while a recorder holds the writer lock.
             path = args.collection_dir.expanduser().resolve() / "collection.json"
             if not path.exists():
+                rows = load_plan(args.plan or PLAN)
                 view = Collection.__new__(Collection)
                 view.state = {"conditions": rows, "attempts": []}
                 view.current, view.selected, view.placement = None, None, view.empty_placement()
                 print(view.display(all_conditions=True) if args.command == "status" else "시도 이력이 없습니다.")
                 return 0
             state = json.loads(path.read_text())
+            saved_conditions(state, args.plan)
+            if args.command == "history" and args.condition_id not in {r["condition_id"] for r in state["conditions"]}:
+                raise CollectionError("계획에 없는 조건 ID입니다")
             if args.command == "history":
                 view = Collection.__new__(Collection)
                 view.state = state

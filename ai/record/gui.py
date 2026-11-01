@@ -10,7 +10,7 @@ from tkinter import font as tkfont, messagebox, scrolledtext, ttk
 
 from ai.record.gui_bridge import CAMERAS, RecorderBridge, run_engine
 from ai.record.gui_presentation import operator_fields, message_notice
-from ai.record.gui_scaling import UIScale, BASE_SIZE, RESIZE_DELAY_MS, window_scale
+from ai.record.gui_scaling import UIScale, BASE_SIZE, RESIZE_DELAY_MS, window_scale, configure_initial_window
 
 STATE_LABELS = {"INITIALIZING": "시작·장부 확인 중", "READY": "녹화 대기",
                 "PRESTART": "시작 검사 중", "RECORDING": "녹화 중", "REVIEW": "저장 검토",
@@ -24,16 +24,22 @@ def display_fields(view, *, now_ns=None):
     snapshot_ns = view.get("snapshot_monotonic_ns", now_ns)
     update_age_ms = max(0, now_ns - snapshot_ns) / 1e6
     stats, condition = view.get("stats"), view.get("condition")
-    fields = {"progress": (f"정상 시연 {stats['success']} / 108    교정 시연 {stats['correction']}    "
-                           f"남은 조건 {108-stats['success']}" if stats is not None else "장부 확인 중"),
+    total = view.get("total", 108) or 108
+    fields = {"progress": (f"정상 시연 {stats['success']} / {total}    교정 시연 {stats['correction']}    "
+                           f"남은 조건 {total-stats['success']}" if stats is not None else "장부 확인 중"),
               "state": STATE_LABELS[view["state"]], "order": "—", "condition": "—", "attempt": "—",
               "position": "—", "yaw": "—", "depth": "—"}
     if condition:
-        fields.update(order=f"{condition['collection_order']:03d} / 108",
+        fields.update(order=f"{condition['collection_order']:03d} / {total}",
                       condition=f"{condition['condition_id']:03d}", attempt=f"{condition['attempt_number']}회차",
                       position=condition["position"], yaw=condition["yaw"], depth=condition["depth"])
-    elif stats and stats["success"] == 108:
-        fields["condition"] = "108개 완료"
+    elif stats and stats["success"] == total:
+        fields["condition"] = f"{total}개 완료"
+    if view.get("custom_plan"):
+        # Full condition text remains in progress/history; keep controls reachable.
+        for key in ("position", "yaw", "depth"):
+            if len(fields[key]) > 70:
+                fields[key] = fields[key][:69] + "…"
     fps = view.get("actual_sample_fps")
     fields.update(frames=str(view.get("frames", 0)), elapsed=f"{view.get('elapsed_s', 0):.2f}초",
                   fps="미확정" if fps is None else f"{fps:.2f}",
@@ -71,9 +77,8 @@ class RecorderWindow:
         self._resize_job = None
         self._pending_size = self._last_size = BASE_SIZE
         self._popup_bases = {}
-        root.title("ACT Recorder · Core-108")
-        root.geometry("960x660")
-        root.minsize(860, 640)
+        root.title("Indy7 ACT Recorder")
+        initial_size = configure_initial_window(root)
         root.configure(background="#f3f5f8")
         root.protocol("WM_DELETE_WINDOW", self.close)
         self._configure_styles()
@@ -96,8 +101,9 @@ class RecorderWindow:
         track = ttk.Frame(self.content, height=3, style="Page.TFrame")
         track.grid(row=1, column=0, sticky="ew", pady=(10, 18))
         track.pack_propagate(False)
-        ttk.Progressbar(track, maximum=108, variable=self.progress_value,
-                        style="Collection.Horizontal.TProgressbar").pack(fill="both", expand=True)
+        self.progressbar = ttk.Progressbar(track, maximum=108, variable=self.progress_value,
+                        style="Collection.Horizontal.TProgressbar")
+        self.progressbar.pack(fill="both", expand=True)
 
         condition = ttk.Frame(self.content, style="Card.TFrame", padding=(22, 14))
         condition.grid(row=2, column=0, sticky="ew", pady=(0, 14))
@@ -106,9 +112,12 @@ class RecorderWindow:
         ttk.Label(heading, text="현재 수집 조건", style="Heading.TLabel").pack(side="left")
         self.label(heading, "identity", style="Muted.TLabel").pack(side="right")
         self.condition_values = []
+        self.condition_titles = []
         for col, (key, title) in enumerate((("position", "바구니 위치"), ("yaw", "바구니 회전"), ("depth", "바구니 깊이"))):
             condition.columnconfigure(col, weight=1, uniform="placement")
-            ttk.Label(condition, text=title, style="Muted.TLabel").grid(row=1, column=col, sticky="w", padx=(0, 12))
+            title_label = ttk.Label(condition, text=title, style="Muted.TLabel")
+            title_label.grid(row=1, column=col, sticky="w", padx=(0, 12))
+            self.condition_titles.append(title_label)
             label = self.label(condition, key, style="Placement.TLabel", wraplength=250)
             label.grid(row=2, column=col, sticky="nw", pady=(5, 0), padx=(0, 12))
             self.condition_values.append(label)
@@ -167,7 +176,8 @@ class RecorderWindow:
         for command in "sxrod":
             root.bind(f"<KeyPress-{command}>", lambda event, c=command: self.shortcut(event, c))
         self.ui_scale.capture(self.shell)
-        self._layout_size(*BASE_SIZE)
+        self._pending_size = initial_size
+        self._layout_size(*initial_size)
         root.bind("<Configure>", self._on_configure, add="+")
         root.bind("<Destroy>", self._on_destroy, add="+")
         self.refresh()
@@ -309,7 +319,7 @@ class RecorderWindow:
             pane = ttk.Frame(window, padding=16, style="Card.TFrame"); pane.pack(fill="both", expand=True)
             toolbar = ttk.Frame(pane, style="Card.TFrame"); toolbar.pack(fill="x", pady=(0, 10))
             self._progress_text = self._text(pane, height=12); self._progress_text.pack(fill="both", expand=True)
-            for command, title in (("progress", "현황 새로고침"), ("progress all", "전체 108개 조건")):
+            for command, title in (("progress", "현황 새로고침"), ("progress all", "전체 계획 조건")):
                 self._command_button(toolbar, title, "progress", lambda c=command: self._query(c, self._progress_text)).pack(side="left", padx=(0, 8))
         self._query("progress", self._progress_text)
 
@@ -437,8 +447,15 @@ class RecorderWindow:
         operator = operator_fields(self.view)
         values.update({key: operator[key] for key in ("progress", "state", "elapsed", "mode", "target_note")})
         condition = self.view.get("condition")
-        values["identity"] = (f"순서 {condition['collection_order']:03d} / 108   ·   조건 {condition['condition_id']:03d}   ·   {condition['attempt_number']}회차"
-                              if condition else "정상 108개 수집 완료" if (self.view.get("stats") or {}).get("success") == 108 else "조건 확인 중")
+        total = self.view.get("total", 108) or 108
+        self.progressbar.configure(maximum=total)
+        titles = ("조건 설명", "조건 값", "추가 정보") if self.view.get("custom_plan") else ("바구니 위치", "바구니 회전", "바구니 깊이")
+        for label, title in zip(self.condition_titles, titles):
+            label.configure(text=title)
+        if self.view.get("dataset_id"):
+            self.root.title(f"Indy7 ACT Recorder · {self.view['dataset_id']}")
+        values["identity"] = (f"순서 {condition['collection_order']:03d} / {total}   ·   조건 {condition['condition_id']:03d}   ·   {condition['attempt_number']}회차"
+                              if condition else f"정상 {total}개 수집 완료" if (self.view.get("stats") or {}).get("success") == total else "조건 확인 중")
         start_failed = bool(self._start_failure) and self.view["state"] == "READY"
         if start_failed:
             values["state"] = "녹화 시작 실패 · 재시도 가능"
@@ -492,13 +509,34 @@ class RecorderWindow:
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="기존 Indy7 Recorder의 Core-108 데스크톱 UI (로봇 제어 없음)")
-    parser.add_argument("--collection-dir", type=Path, default=Path("datasets/indy7_act_core108"))
+    parser = argparse.ArgumentParser(description="Indy7 ACT 데이터셋 관리 및 Recorder GUI")
+    parser.add_argument("--collection-dir", type=Path, help="관리 화면을 건너뛰고 기존 Collection 열기")
+    parser.add_argument("--plans-dir", type=Path, help="프로젝트 내부 데이터셋 정의 JSON 폴더 (기본 ai/record/plans)")
     args = parser.parse_args(argv)
+    if args.plans_dir is not None:
+        from ai.record.collection import PROJECT
+        args.plans_dir = args.plans_dir.absolute()
+        if not args.plans_dir.resolve().is_relative_to(PROJECT):
+            parser.error("프로젝트 내부 계획 폴더를 지정하세요")
     try:
         root = tk.Tk()
     except tk.TclError as exc:
         parser.exit(1, f"GUI 디스플레이에 연결할 수 없습니다: {exc}\n로컬 데스크톱 또는 승인된 X 전달 환경이 필요합니다.\n")
+    if args.collection_dir is None:
+        from ai.record.manager_gui import DatasetManagerWindow
+        selected = []
+        def chosen(path):
+            selected.append(path)
+            root.quit()
+        if args.plans_dir is None:
+            DatasetManagerWindow(root, chosen)
+        else:
+            from ai.record.dataset_manager import DatasetManager
+            DatasetManagerWindow(root, chosen, manager=DatasetManager(plans=args.plans_dir))
+        root.mainloop()
+        if not selected:
+            return 0
+        args.collection_dir = selected[0]
     bridge = RecorderBridge()
     app = RecorderWindow(root, bridge)
     worker = threading.Thread(target=run_engine, args=(bridge, ["--collection-dir", str(args.collection_dir)]),

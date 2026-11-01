@@ -51,6 +51,7 @@ def window():
     app = gui.RecorderWindow(root, bridge)
     root.geometry("960x660+100+100")
     root.update()
+    settle(root)
     try:
         yield root, bridge, app
     finally:

@@ -94,8 +94,9 @@ def operator_fields(view):
     state = view["state"]
     name, color = STATUS[state]
     stats = view.get("stats")
-    progress = (f"정상 시연  {stats['success']} / 108     교정 시연  {stats['correction']}     "
-                f"진행률  {stats['success'] / 108 * 100:.0f}%") if stats is not None else "수집 현황 확인 중"
+    total = view.get("total", 108) or 108
+    progress = (f"정상 시연  {stats['success']} / {total}     교정 시연  {stats['correction']}     "
+                f"진행률  {stats['success'] / total * 100:.0f}%") if stats is not None else "수집 현황 확인 중"
     mode = "교정 시연" if view.get("demonstration_type") == "correction" and view.get("pending") else "일반 시연"
     if mode == "교정 시연":
         mode += " · 마커 대응 대기" if (view.get("correction") or {}).get("start_frame_index") is None else " · 마커 기록됨"
@@ -109,8 +110,10 @@ def operator_fields(view):
         alert = fault_text(last.get("reason", "unknown"), (last.get("details") or {}).get("topic"))
     elif state == "ERROR":
         alert = DEFAULT_NOTICE[state]
-    notice = ("정상 108개 수집을 완료했습니다." if state == "READY" and stats and stats["success"] == 108
+    notice = (f"정상 {total}개 수집을 완료했습니다." if state == "READY" and stats and stats["success"] == total
               else DEFAULT_NOTICE[state])
+    if view.get("custom_plan") and state == "READY" and (not stats or stats["success"] != total):
+        notice = "계획 조건에 맞게 준비 후 녹화를 시작하세요."
     return {"progress": progress, "state": name, "state_color": color,
             "elapsed": recording_clock(view.get("elapsed_s", 0)), "mode": mode,
             "target_note": target, "default_notice": notice, "alert": alert}
