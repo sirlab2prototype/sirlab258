@@ -1,99 +1,79 @@
 #!/usr/bin/env bash
 set -eo pipefail
-# Shared preflight only. Never start/stop containers or robot processes.
-    SHARED="/opt/workspace/omy/cyclo_intelligence"
-
-    case "${1:-}" in
-
-        "")
-            echo "=== OMY 실행 전 점검 ==="
-
-            # Container names are fixed to the shared environment.
-            for name in cyclo_intelligence open_manipulator; do
-                if [[ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" != "true" ]]; then
-                    echo "[STOP] $name 컨테이너가 실행 중이지 않음"
-                    echo "공용 컨테이너를 자동으로 시작하지 않습니다."
-                    return 1
-                fi
-            done
-
-            echo "[OK] 공용 Docker 컨테이너 실행 중"
-
-            if ! python3 -c 'import socket; s=socket.create_connection(("10.42.0.101", 7447), timeout=3); s.close()' 2>/dev/null; then
-                echo "[STOP] OMY Zenoh 라우터 연결 불가"
-                echo "로봇 PC 전원 및 네트워크를 확인하세요."
-                return 1
-            fi
-
-            echo "[OK] OMY Zenoh 라우터 연결 가능"
-            echo
-            echo "로봇 구동 전 확인:"
-            echo " - 다른 사용자 사용 여부"
-            echo " - E-stop 및 작업 공간"
-            echo " - 로봇 초기 자세와 Unpack 완료 여부"
-            echo
-            echo "텔레옵 자동 실행은 아직 연결하지 않았습니다."
-            ;;
-
-
-        status)
-            echo "=== Shared OMY Containers ==="
-
-            docker ps -a \
-                --filter 'name=^/cyclo_intelligence$' \
-                --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
-
-            docker ps -a \
-                --filter 'name=^/open_manipulator$' \
-                --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
-
-            echo
-            echo "=== D405 ==="
-            lsusb -d 8086:0b5b || true
-            ;;
-
-        doctor)
-            echo "=== Shared OMY Environment ==="
-
-            if [[ -x "$SHARED/cyclo.sh" ]]; then
-                echo "[OK] Shared Cyclo launcher"
-            else
-                echo "[FAIL] Shared Cyclo launcher missing"
-                return 1
-            fi
-
-            if docker info >/dev/null 2>&1; then
-                echo "[OK] Docker accessible"
-            else
-                echo "[FAIL] Docker inaccessible"
-                return 1
-            fi
-
-            if lsusb -d 8086:0b5b | grep -q 'RealSense'; then
-                echo "[OK] D405 detected"
-            else
-                echo "[WARN] D405 not detected"
-            fi
-            ;;
-
-        logs)
-            docker logs --tail 100 cyclo_intelligence
-            ;;
-
-        help|-h|--help)
-            echo "Team Capstone - OMY"
-            echo
-            echo "  omy           Safe preflight (no robot motion)"
-            echo "  omy status    Shared container status"
-            echo "  omy doctor    Environment check"
-            echo "  omy logs      Cyclo logs"
-            echo
-            echo "Robot teleoperation is not configured yet."
-            ;;
-
-        *)
-            echo "Unknown or not-yet-configured OMY command: $1" >&2
-            echo "Run: omy --help"
-            return 2
-            ;;
-    esac
+# Shared resources are observed only. Teleop activation remains locked until
+# shared ownership, owned-session shutdown and D405 health are verified.
+SHARED="/opt/workspace/omy/cyclo_intelligence"
+ROBOT="root@10.42.0.101"
+usage() {
+    echo 'Usage: omy [status|doctor|logs|--help]'
+    echo 'omy: local/remote preflight, D405 reuse check; teleop start is SAFETY LOCKED.'
+    echo 'No containers, camera drivers or robot processes are started/stopped.'
+    echo 'Blocked pending shared ownership, owned Ctrl-C/disconnect safe stop and D405 video validation.'
+}
+local_preflight() {
+    local name
+    for name in cyclo_intelligence open_manipulator; do
+        if [[ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" != true ]]; then
+            echo "[STOP] shared container is unavailable: $name" >&2
+            return 1
+        fi
+    done
+    if ! python3 -c 'import socket; s=socket.create_connection(("10.42.0.101",7447),timeout=3); s.close()' 2>/dev/null; then
+        echo '[STOP] robot Zenoh connection unavailable' >&2
+        return 1
+    fi
+    echo '[OK] shared containers and robot Zenoh TCP endpoint reachable (not robot readiness)'
+}
+remote_preflight() {
+    local inventory
+    if ! inventory=$(timeout 15 ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 \
+        -o ServerAliveInterval=2 -o ServerAliveCountMax=2 "$ROBOT" \
+        "test \"\$(docker inspect -f '{{.State.Running}}' open_manipulator)\" = true && test -c /dev/ttyUSB0 && docker top open_manipulator -eo pid,ppid,args" 2>&1); then
+        printf '[STOP] remote state unknown; never interpret SSH failure as idle:\n%s\n' "$inventory" >&2
+        return 1
+    fi
+    # Any existing controller/trajectory/teleop blocks a second start. A process
+    # listing is not an atomic global lease; even an idle result cannot unlock.
+    if printf '%s\n' "$inventory" | grep -Eq 'ros2 launch .*omy_|/ros2_control_node|/joint_trajectory_executor|/leader_joint_trajectory_publisher'; then
+        echo '[STOP] existing robot control/teleop process detected; no process will be stopped.' >&2
+        return 1
+    fi
+    echo '[OK] remote container and leader serial device found; no matching control process observed'
+    echo '[UNKNOWN] physical F3M/L100 readiness and exclusive ownership are not proven by this check'
+}
+d405_reuse_check() {
+    local inventory
+    if ! inventory=$(docker top open_manipulator -eo pid,ppid,args 2>&1); then
+        echo '[STOP] cannot inspect existing D405 driver' >&2; return 1
+    fi
+    if ! printf '%s\n' "$inventory" | grep -q '335122271033' || \
+       ! printf '%s\n' "$inventory" | grep -q '/realsense2_camera_node'; then
+        echo '[STOP] existing D405 driver not confirmed; new driver/reset is prohibited.' >&2; return 1
+    fi
+    echo '[REUSE ONLY] D405 process found; it will not be restarted or stopped.'
+    echo '[UNKNOWN] process presence does not prove video publication; validate /camera/cam_wrist/color/image_rect_raw/compressed'
+}
+case "${1:-}" in
+    help|-h|--help) usage ;;
+    '')
+        local_preflight || exit 1
+        remote_preflight || exit 1
+        d405_reuse_check || exit 1
+        echo '[SAFETY LOCK] Robot launch NOT executed.' >&2
+        echo 'Required: shared exclusive-use protocol, owned session PID/process-group lifecycle and verified Ctrl-C/disconnect safe stop.' >&2
+        echo 'Required: healthy reused D405 stream and operator-approved home/ready motion path.' >&2
+        echo 'No local-only lock, confirmation flag or SSH disconnect is treated as a verified physical stop.' >&2
+        exit 3 ;;
+    status)
+        for name in cyclo_intelligence open_manipulator; do
+            docker ps -a --filter "name=^/${name}$" --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+        done
+        lsusb -d 8086:0b5b || true ;;
+    doctor)
+        [[ -x "$SHARED/cyclo.sh" ]] || { echo '[FAIL] shared launcher missing' >&2; exit 1; }
+        docker info >/dev/null 2>&1 || { echo '[FAIL] Docker inaccessible' >&2; exit 1; }
+        if lsusb -d 8086:0b5b | grep -q RealSense; then echo '[OK] D405 USB model detected; serial/video not certified'
+        else echo '[WARN] D405 USB model not detected'; fi ;;
+    logs) docker logs --tail 100 cyclo_intelligence ;;
+    *) echo "Unknown OMY command: $1; use omy --help" >&2; exit 2 ;;
+esac

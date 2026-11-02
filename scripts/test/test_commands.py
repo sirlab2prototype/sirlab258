@@ -67,15 +67,15 @@ def test_record_keeps_gui_vs_terminal(checkout,args):
 
 def test_omy_only_readonly_operations(tmp_path):
     fake=tmp_path/'bin';fake.mkdir();log=tmp_path/'calls'
-    for name in ('docker','python3','lsusb'):
-        p=fake/name;p.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$0 $*" >> "$CALL_LOG"\ncase "$1" in inspect) echo true ;; esac\n');p.chmod(0o755)
+    for name in ('docker','python3','lsusb','ssh'):
+        p=fake/name;p.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$0 $*" >> "$CALL_LOG"\ncase "$1" in inspect) echo true ;; top) echo "335122271033 /realsense2_camera_node" ;; esac\n');p.chmod(0o755)
     env=os.environ.copy();env.update(PATH=str(fake)+':'+env['PATH'],CALL_LOG=str(log))
     for args in ((),('status',),('doctor',),('logs',)):
         result=run(ROOT/'scripts/bin/omy',*args,env=env)
-        assert result.returncode==0,result.stderr
+        assert result.returncode==(3 if not args else 0),result.stderr
     text=log.read_text()
     assert '7447' in text and 'inspect' in text and 'logs' in text
-    assert not any(word in text for word in ('restart','docker start','docker stop','exec','kill'))
+    assert not any(word in text for word in ('restart','docker start','docker stop','docker exec','pkill'))
 
 
 def test_installer_collision_reinstall_and_legacy_links(checkout,tmp_path):
