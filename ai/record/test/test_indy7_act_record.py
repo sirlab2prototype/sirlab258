@@ -23,6 +23,7 @@ def recorder(monkeypatch):
     sys.modules["sensor_msgs.msg"].Image = object
     sys.modules["sensor_msgs.msg"].JointState = object
     sys.modules["std_msgs.msg"].Float32 = object
+    sys.modules["std_msgs.msg"].String = object
     spec = importlib.util.spec_from_file_location("tested_act_recorder", Path(__file__).parents[1] / "indy7_act_record.py")
     module = importlib.util.module_from_spec(spec)
     monkeypatch.setitem(sys.modules, spec.name, module)

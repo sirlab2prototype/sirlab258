@@ -6,10 +6,10 @@
 작성 기준일: 2026-10-09 (Asia/Seoul)  
 대상 작업공간: `/home/sirlab2/sirlab258`
 
-> [!WARNING]
-> 현재 Indy7에는 motion, teleop, Home, Zero, Recover, servo on/off, brake 조작,
-> `reset_servo`, `set_robot_zero_as_current`, calibration, encoder reset 또는 SDO/EtherCAT
-> write를 실행하지 않는다. 제조사 공식 복구 절차를 받기 전까지 모든 진단은 read-only로 제한한다.
+> **2026-11-02 사용자 상태 갱신:** 사용자가 J6 문제가 완전히 해결됐다고 명시적으로 확인했다.
+> 아래 fault/복구 미확인·motion 금지 서술은 과거 조사 시점의 기록이며 현재 J6 상태로 적용하지 않는다.
+> 복구 상세/측정값을 이번 에이전트가 확인했다는 뜻은 아니다. 현재 실행 범위는 PROJECT_CONTEXT와
+> 사용자 요청을 따른다. 추가 calibration/encoder/Servo/SDO 복구 write는 요청되지 않았다.
 
 ## 표기 규칙
 

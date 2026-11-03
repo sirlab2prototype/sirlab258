@@ -44,6 +44,9 @@ Tk 창·ROS·Dataset을 시작하지 않는다. 프로젝트에서 이미 쓰는
 카메라 미수신 메타데이터만으로 경고를 만들지 않는다. 실제 시작 실패 응답이 있으면
 Camera A/B 등을 구분한 한국어 요약과 원본 진단을 제공한다.
 INVALID/SAVE FAILED/Collection Blocked와 이전 Pending 안내는 기본 화면에서도 별도 안내한다.
+QP 수집 상태 미수신·지연·누락·발행자/버전 불일치와 미검증 Home은 한국어 원인으로 안내한다.
+같은 checkout의 QP/Recorder가 필요하며, 정적 경로 일치가 실행 중인 QP의 버전 증거는 아니다.
+[호환성 점검과 승인 후 qdes 관찰 절차](../../docs/RECORDER_COMPATIBILITY_AND_QDES_OBSERVATION.md)를 따른다.
 저장이 확인된 뒤의 staging 정리 경고는 저장 실패로 오인하지 않도록 구분한다.
 
 선택창과 녹화창 모두 QHD에서 초기 **1300×820**을 목표로 한다. Tk 화면 크기와
@@ -154,3 +157,10 @@ token을 확인해 중복 클릭·오래된 상태의 명령을 거부한다. �
 8건의 torchvision 영상 API deprecation 경고는 기존 경고다. 테스트를 삭제하거나 무결성 검사를 완화하지 않았다.
 최소 창의 긴 Depth+INVALID 조합에서 발견한 높이 초과는 여백을 조정해 해결하고 같은 검사를 다시 통과했다.
 검증 로그/XML·보호 해시 대조·화면은 `tmp/act_gui_design_eten3gqc/{final_results.xml,final_suite.log,verification.json,ready.png,review_correction.png,minimum_long_depth_error.png}`에 남겼다.
+
+## Home 포함 표시 (2026-11-02)
+
+활성 프로필에서는 모드에 **Home 포함**, 녹화 중 Home 단계, 도착 확인을 표시한다.
+작업/후퇴 → 기존 View+Y → Home 도착 확인 → r → 실제 작업 결과 확인 후 저장한다.
+완료 전 종료·목표 누락·노후화·오류는 기존 INVALID 정책을 따른다.
+Home 완료 자체를 실제 물체 운반 성공으로 표시하거나 자동 저장하지 않는다.

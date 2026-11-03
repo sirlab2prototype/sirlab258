@@ -45,7 +45,7 @@ def test_indy_routes_and_preserves_arguments(checkout,tmp_path,args,launch):
     assert json.loads(result.stdout)['args']==['launch',str(root/'ros2_ws/src/capstone_teleop/launch'/launch),*([args[0]] if args and ':=' in args[0] else []),'show_camera:=false']
 
 
-@pytest.mark.parametrize('command,module',[('train','ai.train.run_train'),('validate','ai.train.validate_dataset'),('infer','ai.serve.infer'),('execute','ai.execute.main'),('task','ai.execute.task_main'),('evaluate','ai.evaluate.main')])
+@pytest.mark.parametrize('command,module',[('snapshot','ai.train.snapshot'),('train','ai.train.run_train'),('validate','ai.train.validate_dataset'),('infer','ai.serve.infer'),('execute','ai.execute.main'),('task','ai.execute.task_main'),('evaluate','ai.evaluate.main')])
 def test_act_modules_and_symlink_root(checkout,tmp_path,command,module):
     root,env=checkout;link=tmp_path/'act';link.symlink_to(root/'scripts/bin/act')
     result=run(link,command,'--example','value with spaces',env=env)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import math
+import json
 import time
 
 import numpy as np
@@ -23,6 +24,7 @@ from .qp_core import (
     shape_trigger,
 )
 from .input_profile import MotionProfile
+from .action_context import ActionContext
 
 
 MSG_RECOVER = 1
@@ -263,6 +265,14 @@ class QPTeleop(Node):
         self.auto_arm_reason = 'startup'
         self.home_rearm_pending = False
 
+        # Independent recording telemetry; no new SDK calls or control thread.
+        self.capture_context = ActionContext(self.get_clock().now().nanoseconds)
+        self.context_pub = self.create_publisher(String, '/capstone/action_context',
+            QoSProfile(depth=32, reliability=ReliabilityPolicy.RELIABLE,
+                       durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self.context_timer = self.create_timer(0.05, self.publish_action_context)
+        self.publish_action_context()
+
         self.create_subscription(
             Joy,
             '/joy',
@@ -412,6 +422,7 @@ class QPTeleop(Node):
             self.waiting_for_fresh_joint = False
             self.arming = False
             self.armed = True
+            self.recording_phase('QP_TELEOP', 'fresh_joint_after_arm')
 
             self.get_logger().warning(
                 'QP TELEOP ARMED'
@@ -575,7 +586,22 @@ class QPTeleop(Node):
                 f'Gripper {label} service failed: {exc}'
             )
 
+    def publish_action_context(self):
+        # A telemetry failure must not introduce a new robot command path.
+        try:
+            msg = String()
+            msg.data = json.dumps(self.capture_context.envelope(self.get_clock().now().nanoseconds), allow_nan=False)
+            self.context_pub.publish(msg)
+        except Exception as exc:
+            self.get_logger().error(f'Action context publication failed: {exc}')
+
+    def recording_phase(self, phase, reason):
+        self.capture_context.transition(phase, self.get_clock().now().nanoseconds, reason)
+        self.publish_action_context()
+
     def request_capstone_home(self):
+        self.capture_context.home_requested(self.get_clock().now().nanoseconds)
+        self.publish_action_context()
         # HOME must run outside TELE_OP.
         # Rearming is scheduled again only after HOME command succeeds.
         self.auto_arm_pending = False
@@ -590,6 +616,7 @@ class QPTeleop(Node):
             self.get_logger().error(
                 'Cannot move HOME: /indy_srv unavailable'
             )
+            self.recording_phase('HOME_FAILED', 'indy_service_unavailable')
             return
 
         if (
@@ -599,6 +626,7 @@ class QPTeleop(Node):
             self.get_logger().warning(
                 'Robot command already in progress'
             )
+            self.recording_phase('HOME_FAILED', 'command_already_in_progress')
             return
 
         # First make sure TELE_OP has fully stopped.
@@ -624,6 +652,7 @@ class QPTeleop(Node):
                 self.get_logger().error(
                     'Could not stop TELE_OP before HOME'
                 )
+                self.recording_phase('HOME_FAILED', 'tele_stop_failed')
                 return
 
             motion = self.indy.get_motion_data()
@@ -632,6 +661,7 @@ class QPTeleop(Node):
                 self.get_logger().error(
                     'Cannot move HOME: robot still moving'
                 )
+                self.recording_phase('HOME_FAILED', 'robot_still_moving')
                 return
 
             self.get_logger().warning(
@@ -646,6 +676,7 @@ class QPTeleop(Node):
             )
 
             self.home_rearm_pending = True
+            self.recording_phase('HOME_MOVING', 'movej_rpc_returned_not_arrival_proof')
             self.auto_arm_reason = 'CAPSTONE HOME complete'
             self.auto_arm_pending = True
 
@@ -653,6 +684,7 @@ class QPTeleop(Node):
             self.get_logger().error(
                 f'CAPSTONE HOME failed: {exc}'
             )
+            self.recording_phase('HOME_FAILED', 'home_exception')
 
     def request_robot_command(self, data, label):
         if (
@@ -671,6 +703,8 @@ class QPTeleop(Node):
             return
 
         # Recover/Zero must not race with active QP TELE_OP.
+        if self.home_rearm_pending:
+            self.recording_phase('HOME_CANCELLED', 'operator_robot_command')
         self.auto_arm_pending = False
         self.home_rearm_pending = False
 
@@ -826,6 +860,7 @@ class QPTeleop(Node):
                 return
 
             self.home_rearm_pending = False
+            self.recording_phase('HOME_UNVERIFIED', 'legacy_arrival_check_passed_full_recording_validation_pending')
 
         reason = self.auto_arm_reason
 

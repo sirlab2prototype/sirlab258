@@ -19,6 +19,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from ai import dataset_contract as contract
+from ai.home_action import SimulatedHomeContract, LiveHomeContract, validate_context
 from lerobot.datasets.io_utils import load_info, load_stats, load_tasks
 from lerobot.datasets.utils import DEFAULT_FEATURES, check_version_compatibility
 
@@ -151,6 +152,11 @@ class _Validator:
         valid = integrity.get("valid") is True and integrity.get("violations") == []
         self.invalid += not valid
         self.check(valid, "integrity", f"Episode {index}: invalid or unconfirmed integrity")
+        if meta.get("home_return_required"):
+            endpoint = meta.get("action_context_stop") or {}
+            self.check(endpoint.get("phase") == "HOME_COMPLETE" and endpoint.get("arrival_verified") is True
+                       and meta.get("home_action_acceptance") in ("simulated_fixture_only","live_qdes_profile_v1"),
+                       "integrity", f"Episode {index}: required Home endpoint missing or live-unverified")
         if self.repo_id:
             self.check(meta.get("dataset_repo_id") == self.repo_id, "sidecar", f"Episode {index}: repo id mismatch")
         identity = meta.get("dataset_repo_id")
@@ -263,6 +269,21 @@ class _Validator:
             stamp = header["sec"] * NS + header["nanosec"]
             self.check(meta["start_clock_observation"]["sample_system_time_ns"] <= stamp <= epoch,
                        "timestamp", f"Episode {index}: pre-episode/future action")
+        elif origin["kind"] == "home_qdes":
+            # No live contract is approved. Support explicit offline fixtures
+            # without allowing a message's 'verified' flag to enable hardware data.
+            live = meta.get("home_action_acceptance") == "live_qdes_profile_v1"
+            self.check(meta.get("home_action_acceptance") in ("simulated_fixture_only","live_qdes_profile_v1"),
+                       "integrity", f"Episode {index}: live Home action is locked")
+            context = validate_context(origin["action_context"])
+            sample = origin["source"]["sample"]
+            self.check(context.get("sample") == sample, "integrity", f"Episode {index}: Home sample mismatch")
+            validator = (LiveHomeContract(sample["evidence_id"],profile=meta.get("home_capture_profile")) if live
+                         else SimulatedHomeContract(sample["evidence_id"]))
+            validator.target(context, epoch, stamps[2])
+            note = "Simulated Home targets prove software wiring, not physical Home demonstrations."
+            if not live and note not in self.warnings:
+                self.warnings.append(note)
         else:
             self.check(origin["kind"] == "initial_hold", "integrity", f"Episode {index}: unknown action source")
 

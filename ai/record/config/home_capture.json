@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "scope": "collection_only",
+  "evidence_id": "indy7-ga12-home-20261102",
+  "robot_ip": "192.168.1.114",
+  "robot_serial": "PD47I7E0D002",
+  "controller_version": "3.3.2-GA12 [2026.09.15]",
+  "sdk_version": "3.4.2.2",
+  "source_unit": "deg",
+  "home_target_rad": [
+    9.112364024662395e-05,
+    0.6981870975481902,
+    -2.268869384529762,
+    1.570811511159389,
+    7.592182246175333e-06,
+    1.5796451461025078
+  ],
+  "qdes_intermediate_observed": true,
+  "evidence_path": "/home/sirlab2/sirlab258/outputs/preserved/validation/home_qdes_20261102_0rx_dvsw/home_motion_full.jsonl",
+  "evidence_sha256": "54631e6ed4eeb1e479f8726fcc0d926ecb878b685bcbaf136c15177be4f69160",
+  "moving_samples": 69,
+  "qdes_span_deg": [
+    18.753601491,
+    63.88953,
+    59.82988,
+    11.863799999999998,
+    59.66341936729,
+    0.8442660000000046
+  ],
+  "unit_basis": "SDK movej degree target and six-axis final qdes correspondence; qdotdes consistent with finite differences",
+  "actuator_replay_verified": false
+}

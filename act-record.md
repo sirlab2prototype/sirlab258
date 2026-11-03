@@ -138,7 +138,11 @@ GUI의 주요 버튼은 **목록 새로고침**, **선택한 데이터셋 열기
 
 정상 저장만 조건 완료에 포함한다. Correction은 별도 보존하며 같은 조건의 다음 Attempt로 이어진다.
 실물 작업 완료 여부는 작업자가 판단한다. 기존 무결성 검사를 통과하지 못한 자료는 저장할 수 없다.
-Core-108의 Home 복귀 전 녹화 종료 등 기존 운영 규칙도 유지한다.
+현재 `act record`는 검증된 장비별 Home 프로필을 불러오며 GUI에 **Home 포함**을 표시한다.
+작업 후 충분히 후퇴하고 기존 View+Y Home → **Home 도착 확인** → r → 실제 성공 확인 후 o다.
+그리퍼 성공 명령 상태와 fresh context가 필요하다. Home 없는 기존 터미널 수집은
+`act record --collection-dir <경로> --no-home-capture`로 실행하고 Home 전에 r로 끝낸다.
+Home 수집의 실측 범위와 추론 제한은 [Home 수집](docs/ACT_HOME_RECORDING.md)을 따른다.
 
 녹화 화면 진입 시 기존 worker가 ROS 관측 구독을 시작한다. 관리 화면만 여는 것과 구분한다.
 기존 Collection writer lock, Pending, receipt 검증과 reconcile 절차를 그대로 사용한다.

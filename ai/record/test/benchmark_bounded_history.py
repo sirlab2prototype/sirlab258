@@ -36,6 +36,7 @@ def main():
     sys.modules["sensor_msgs.msg"].Image = object
     sys.modules["sensor_msgs.msg"].JointState = object
     sys.modules["std_msgs.msg"].Float32 = object
+    sys.modules["std_msgs.msg"].String = object
     spec = importlib.util.spec_from_file_location("bench_recorder", project / "ai/record/indy7_act_record.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

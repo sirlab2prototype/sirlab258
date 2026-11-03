@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "dataset_id": "act1_001_901",
+  "robot": "indy7",
+  "policy": "act",
+  "action": {"id": "act1", "description": "Shelf to table A, release, retreat, and return Home"},
+  "plan": {
+    "version": 1, "id": "home_pilot", "description": "Example only; hardware validation required",
+    "kind": "custom",
+    "conditions": [{"condition_id": 1, "collection_order": 1,
+      "description": "Approved shelf to A placement and Home path",
+      "fields": {"source": "shelf", "destination": "table A", "end": "Home"}}]
+  }
+}

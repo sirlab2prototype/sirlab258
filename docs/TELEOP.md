@@ -8,6 +8,11 @@
 아래 키맵은 현재 코드의 기능 설명이며 Home/Zero/Recover 사용 허가가 아니다.
 Gripper의 0/1과 서비스 성공은 물리 위치·파지 완료가 아닌 명령 상태다.
 
+QP는 수집용 `/capstone/action_context` heartbeat와 미검증 Home 시각을 추가 발행한다.
+movej·입력 매핑·기존 도착 검사·재ARM 제어는 유지하며 새 qdes 조회나 reader thread는 없다.
+새 Recorder는 이 heartbeat를 요구하고 Home 중 녹화를 INVALID로 차단한다.
+[Home 포함 ACT 수집의 조건부 구현](ACT_HOME_RECORDING.md)을 따른다.
+
 ## 실행 진입점
 
 | 명령 | 연결 |

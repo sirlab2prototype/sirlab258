@@ -1,9 +1,15 @@
 # sirlab258 — 현재 상태와 다음 작업
 
-소프트웨어 확인: 2026-11-01. 실물 정보는 과거 기록이며 이번 정리에서는 장비에 접속하지 않았다.
+소프트웨어 확인: 2026-11-02. 실물 정보는 날짜와 근거를 구분한다.
 작업 규칙은 [AGENTS](../AGENTS.md), 운영 진입점은 [README](../README.md)를 따른다.
 
 ## 구현 기준과 Git
+
+- **2026-11-02 사용자 확인: Indy7 J6 문제는 완전히 해결됐다.** 현재 대화에서 사용자가
+  명시적으로 확인했으며 J6 미해결을 전제로 한 과거 연결/이동 차단은 현재 기준이 아니다.
+  복구 원인·방법·측정값을 에이전트가 새로 확인했다는 뜻은 아니다. 과거 진단 기록은 보존한다.
+- 사용자는 Home 포함 수집을 위한 필요한 단계를 진행하도록 요청했고 현장 안전도 확인했다.
+  J6 복구 검증은 반복하지 않는다. qdes의 중간 목표 의미·단위·시간과 수집 통합 검증은 별개다.
 
 - 검증 구현 보존 기준: `f7d03b93d3044d136fb14d960b38e3e2373398d4`.
 - Recorder/Core-108/Correction 기준: `b3bbb3b01b015aa60f769604c80db17fd723fac5`.
@@ -22,7 +28,7 @@
   CUDA 검증 범위와 현재 사용 가능 여부는 별개다. 현재 의존성 원본은 requirements와 vendored pyproject다.
 - 카메라 serial: `317222074298`, `844212071939`; 설정은 RGB640×480·30FPS이다.
 - Mark7 설정 기본값은 `/dev/ttyACM0`,115200이다. 실제 포트·펌웨어·손가락 위치 피드백 지원은 미확인이다.
-- `192.168.1.114`는 launch의 접속 대상 설정이다. 현재 그 주소의 장비 신원을 재확인한 결과가 아니다.
+- `192.168.1.114`는 launch의 접속 대상 설정이다. 2026-11-02 읽기 관측에서 위 Home 수집 장비 신원을 확인했다.
 - OMY는 별도 ROBOTIS 경로이며 현재 Indy7 수집과 통합 검증된 장비로 취급하지 않는다.
 
 | 코드 | 현재 역할 |
@@ -130,7 +136,56 @@
   근거: `tmp/camera_cli_66g5gpfc/{verification.json,release.xml,release.log}`.
   실제 장비·카메라 스트리밍·ROS·학습·추론 실행 및 Git 커밋은 하지 않았다.
 
+## Home 포함 ACT 수집 (2026-11-02)
+
+- 사용자 J6 해결·현장 안전 확인 후 운영자의 기존 Home에서 qdes 중간 목표를 실측했다.
+  serial PD47I7E0D002 / controller3.3.2-GA12 / SDK3.4.2.2에 한정한다.
+  2400표본/20.0006Hz, 이동69표본, state RPC 최대4.91ms/4 getter17.20ms,
+  오류/75ms 초과 간격0. degree 목표·미분 대응을 장비별 근거로 기록했다.
+- `ai/record/config/home_capture.json`을 활성화했다. `act record`가 읽기 전용 독립 source를
+  시작하고 `/capstone/recording_context`의 measured q와 Home qdes를 기존20FPS/7D에 정렬한다.
+  QP 명령/기존 movej/재ARM/Driver는 유지한다. Home 완료 후 r, 실제 성공 확인 후 o다.
+  Home 없는 기존 터미널 수집은 `--no-home-capture`로 Home 전에 r를 사용한다.
+- 프로필은 collection_only이며 원문 SHA/신원/버전 결합이다. 원문은
+  `outputs/preserved/validation/home_qdes_20261102_0rx_dvsw/`에 보존했다.
+  두 D435·state/context 수신 확인과 전체 실제 이동7D Episode 저장 검증은 구분한다.
+- 관련 오프라인424개와 마지막 집중110개 통과. 근거 `tmp/home_live_0rx_dvsw/`.
+  기존 Collection/Receipt 보호와 Core108 호환성을 유지한다. 빌드·커밋·학습/추론은 하지 않았다.
+- 2026-11-03 사용자가 그리퍼 개폐 정상 동작을 확인했다. 실제 Recorder에서 latched
+  성공 명령 상태0.0과 두 RGB/state/context를 수신하고 HistoryAligner 시작·무결성 검사를
+  통과했다(fault0). 초기 gripper 차단은 해소됐다. 이동/그리퍼 명령은 보내지 않았다.
+  근거: 위 보존 디렉터리의 `gripper_start_20261103.json`. 전체 실제 이동 Episode 저장은
+  아직 확인하지 않았으며 첫 기술 Pilot에서 확인한다.
+- ACT 실물 replay는 미검증/잠금 유지. 수집한 controller 목표를 Teleop으로 실행할 때의
+  추종/보간/속도 의미는 별도 검증 대상이다. [Home 수집](ACT_HOME_RECORDING.md)을 따른다.
+
+## ACT 학습 Snapshot (2026-11-03)
+
+- `act snapshot --collection <경로> [반복] --dataset <경로> [반복] --name <이름>
+  --expect-episodes <전체 성공 수>`를 제공한다. 10개 하드코딩/부분 선택/자동 중복 제거는 없다.
+- 단일 입력은 success Dataset 독립 복사, 다중 입력은 LeRobot0.5.1 공식 aggregate_datasets다.
+  `outputs/training_snapshots/<name>/` 자체가 표준 v3 Dataset 루트이며 기존 act train에 전달한다.
+- 기존 Recorder/Home/OMY/공식 LeRobot/학습 코드는 바꾸지 않았다. Snapshot은 Collection
+  공유 잠금을 읽기 전용으로 사용하며 해당 Recorder 창을 정상 종료한 뒤 생성한다.
+- 원본 Episode/Attempt와 출력 Episode 매핑, 이전 Snapshot ID를 manifest로 추적한다.
+  Timing frames 원문을 유지하고 병합 시 episode.json의 출력 identity/index를 연결한다.
+- 성공4개 단일 복사와 원본4개+복사4개인 중복 포함8개 병합을 테스트했다. 공식 로더 인식과
+  기존 Validator의 metadata/data·매핑 검사만 수행했다. 영상 전체 디코딩·Home/기록 시각
+  정밀 재검증·학습/추론·ROS/장비 접근은 없었다. [Snapshot](../ai/train/SNAPSHOTS.md)을 따른다.
+
 ## 수집에서 평가까지
+
+Home 후속 호환성 점검(2026-11-02): 실제 구독 콜백을 쓰는 Fake ROS에서 Home 없는
+Core-108 Success/Correction 저장 Action이 기존 경로와 동일하고 Receipt 재개가 가능함을
+확인했다. 당시 live reader/필수 Home 종료는 비활성이었다. 현재 활성 상태는 위 Home 수집 항목을 따른다.
+설치 QP는 현재 소스와 정적으로 일치하지만 실행 중인 QP 버전·실제 ROS 수신은 미확인이다.
+GUI 오류 설명과 비연결 설치 점검, qdes 진단의 초기화/응답/종료·분석을 보강했다.
+관련 전체 회귀417개, Fake wrapper2개, 마지막 추가 호환성/진단33개(부분집합)가 통과했다.
+근거 `tmp/recorder_compat_jsjoocks/`; QP 제어/telemetry와 기존 Collection/Receipt12개는
+이 단계 시작 전후 해시가 동일하다.
+장비 연결·SDK RPC·Home·ROS 제어 노드·학습/추론·빌드·커밋은 하지 않았다.
+이전 조사 때의 J6 확인 전 읽기 연결 금지는 위 사용자 해결 확인으로 갱신됐다. 상세는
+[호환성 및 관찰 절차](RECORDER_COMPATIBILITY_AND_QDES_OBSERVATION.md)를 따른다.
 
 실물 운용 승인 및 장비 상태 확인 → 카메라/상태/QP 목표 → Recorder/Core-108 → Success Dataset →
 Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dry Run → Mock 실행/Task → 평가.
@@ -141,7 +196,8 @@ Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dr
 - 목표는 L/C/R × A1..A6 × 여섯 Depth의 정상 성공108개다. 원본 ID와 Shuffle은 유지한다.
 - 조건표는 `docs/ACT_108_Episode_Execution_Log_Template.md`를 코드가 직접 읽는다. 이동·수정 금지.
 - `ready`는 제거됐다. s에서 조건·Attempt·선택적 좌표를 확정하고 60ms 시작 검사 후 기록한다.
-- 미측정 좌표는 null이다. Home 전에 r로 끝내며 Home 동작을 기록 Action에 자동 추가하지 않는다.
+- 미측정 좌표는 null이다. 활성 Home 프로필 사용 시 Home 완료 후 r로 끝낸다.
+  `--no-home-capture`는 Home 전에 r이며 미검증 Home 녹화는 차단한다.
 - `datasets/indy7_act_core108/{success,correction,failure,pending}`와 `collection.json`, `receipts/`를 함께 보존한다.
 - 정상만 Core 완료에 포함한다. Correction은 미완료를 유지하고 동일 조건의 다음 Attempt를 안내한다.
 - 신규 Failure 저장은 없으며 과거 Failure 이력은 읽는다. INVALID 저장 차단·Pending·reconcile을 유지한다.
@@ -174,8 +230,10 @@ CPU 전체 회귀 결과와 복구 커밋은 [정리 기록](PROJECT_CLEANUP_AUD
 
 - 최신 장비 상태·접속 대상·위치 정확성·실제 QoS/clock·카메라 mount/USB 대역폭은 이번에 확인하지 않았다.
 - 과거 J6 큰 음수/FAULT 반복 관측과 후속33.47° 관측은 [인계](INDY7_J6_FAULT_HANDOFF.md)의 날짜별 기록이다.
-  현재 같은 값이라고 단정하지 않는다. 복구 버튼 조작·Pilot 존재만으로 복구/기준 위치 검증 완료를 단정하지 않는다.
-- **기존 J6 복구 절차·기준 위치 검증 전 motion/write 제한은 유지한다.** 제한 해제의 날짜·근거·승인 기록은 확인되지 않았다.
+  현재 같은 값이라고 단정하지 않는다. **2026-11-02 사용자가 J6 문제의 완전 해결을 확인했다.**
+- 과거 J6 미해결 때문에 두었던 연결/이동 제한은 현재 대화의 사용자 확인으로 해제됐다.
+  실제 명령은 현재 승인된 Home 수집 준비 범위에서만 수행하며 calibration/encoder/Servo/SDO
+  복구 write를 추가로 실행하지 않는다.
 - teleop/move/Home/Zero/Recover/calibration, encoder·offset·multi-turn reset, Servo/brake/SDO/PDO write를 임의 실행하지 않는다.
   `reset_servo`, `reset_overflow_count`, `set_robot_zero_as_current`, `set_servo`/`set_servo_rx`,
   `set_brake`와 brake release/수동 강제 이동도 안전한 조회·복구로 취급하지 않는다.
@@ -194,7 +252,7 @@ CPU 전체 회귀 결과와 복구 커밋은 [정리 기록](PROJECT_CLEANUP_AUD
   두 카메라·7D 학습/추론 연결. 구형 잘못된 정규화 Checkpoint는 자동 수정하지 않는다.
 - 보류: `scripts/rotate_ros_image.py`는 과거 wrist 독립 도구이며 수동 외부 호출 여부가 미확인이라 유지했다.
 - 구형 Pool·단일 카메라 YAML은 Git 원문과 설계 메모를 남기고 제거했다. 현행 v2 경로로 사용하지 않는다.
-- 다음 순서: 장비 복구/제한 해제 근거 확인 → 승인된 수동 stack/최신 Recorder 실물 통합 확인 →
+- 다음 순서: 사용자 확인으로 J6 해결 기록 유지 → 승인된 Home qdes/최신 Recorder 실물 통합 확인 →
   실제 feasible workspace·카메라 역할 검증 → Pilot/정상108개 → 실제 성공 데이터 학습 →
   승인된 ROS 관측 추론·최종 모델 부하 검증 → 별도 실물 실행 안전 검증·미관측 pose 평가.
 - 문서·코드 정리는 이 실물 작업의 승인이 아니다. 제조사 문의는 초안·과거 조사와 실제 송신/답변을 구분한다.

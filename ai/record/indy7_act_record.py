@@ -2,7 +2,8 @@
 """Indy7 ACT Recorder: s로 준비·시작, x로 교정 전환, r로 REVIEW, o로 저장.
 
 기존 관측 구독·20Hz 고정 그리드·60ms 시작 검증·시간 무결성 검사를 사용한다.
-Home 복귀는 기록 Action에 포함되지 않으므로 운영상 복귀 전에 r로 종료한다.
+실물 Home qdes는 장비별 실측 프로필과 시간/도착 검사를 통과해야 저장한다.
+수집 범위/추론 제한: docs/ACT_HOME_RECORDING.md.
 Recorder는 로봇/카메라/그리퍼를 시작하거나 제어하지 않는다.
 --collection-dir은 고정 Core-108 장부와 Success/Correction 저장·대조를 사용한다.
 과거 Failure Dataset은 읽기·대조만 지원하고 새 Failure Episode는 추가하지 않는다.
@@ -35,7 +36,8 @@ from lerobot.datasets.utils import DEFAULT_FEATURES
 from rclpy.node import Node
 from sensor_msgs.msg import Image, JointState
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, String
+from ai.home_action import CONTEXT_TOPIC, LIVE_CONTEXT_TOPIC, LiveHomeContract, validate_context, vector
 from ai import dataset_contract as contract
 from ai.record import terminal_ui as ui
 from ai.record.correction_marker import reference as frame_reference, validate as validate_correction
@@ -100,6 +102,7 @@ class Indy7Observations(Node):
         action_topic: str,
         gripper_topic: str,
         sync_options: SyncOptions | None = None,
+        *, context_topic=CONTEXT_TOPIC,
     ):
         super().__init__("indy7_act_recorder")
         self.lock = threading.Lock()
@@ -112,10 +115,19 @@ class Indy7Observations(Node):
         self.gripper: tuple[float, float] | None = None
         self.source_timing: dict[str, dict] = {}
         self.history = BoundedHistory(sync_options or SyncOptions())
+        self.require_action_context = True
+        self.require_home_complete = False
+        self.home_contract = None
+        self.home_qp_action_stamp = 0
+        self.last_home_phase = None
+        self.create_subscription(String, context_topic, self._action_context,
+            QoSProfile(depth=32, reliability=ReliabilityPolicy.RELIABLE,
+                       durability=DurabilityPolicy.TRANSIENT_LOCAL))
         self.create_subscription(Image, camera_317_topic, lambda msg: self._image("camera_317222074298", msg), 5)
         self.create_subscription(Image, camera_844_topic, lambda msg: self._image("camera_844212071939", msg), 5)
-        self.create_subscription(JointState, state_topic, self._state, 20)
-        self.create_subscription(JointState, action_topic, self._action, 20)
+        if context_topic != LIVE_CONTEXT_TOPIC:
+            self.create_subscription(JointState, state_topic, self._state, 20)
+            self.create_subscription(JointState, action_topic, self._action, 20)
         self.create_subscription(
             Float32,
             gripper_topic,
@@ -182,6 +194,8 @@ class Indy7Observations(Node):
         return np.asarray([positions[name] for name in JOINT_NAMES], dtype=np.float32)
 
     def _state(self, msg: JointState) -> None:
+        if getattr(self,"home_contract",None) is not None:
+            return  # The independent reader supplies paired measured q + qdes.
         receipt = self._receipt(msg)
         vector = self._joint_vector(msg)
         if vector is not None:
@@ -190,6 +204,8 @@ class Indy7Observations(Node):
                 self._remember_timing("state", receipt, vector)
 
     def _action(self, msg: JointState) -> None:
+        if getattr(self,"home_contract",None) is not None:
+            return  # Live source pairs the unchanged QP target with its provenance.
         receipt = self._receipt(msg)
         vector = self._joint_vector(msg)
         if vector is not None:
@@ -202,6 +218,44 @@ class Indy7Observations(Node):
         with self.lock:
             self.gripper = (float(msg.data), receipt["callback_monotonic_ns"] / NANOSECONDS)
             self._remember_timing("gripper", receipt, self.gripper[0])
+
+    def _action_context(self, msg: String) -> None:
+        # One envelope binds source, phase, Home generation and optional sample.
+        receipt = self._receipt(msg)
+        value = None
+        try:
+            value = json.loads(msg.data)
+            validate_context(value)
+            if getattr(self,"home_contract",None) is not None:
+                if value.get("evidence_id") != self.home_contract.evidence_id:
+                    raise ValueError("home_profile_mismatch")
+                measured = vector(value["observed_state"]["position_rad"]).astype(np.float32)
+            stamp = value["stamp_ns"]
+        except (ValueError, TypeError, KeyError):
+            # Latch malformed telemetry as an integrity fault, never drop it.
+            receipt["input_error"] = ("action_context_protocol_mismatch" if isinstance(value, dict)
+                and value.get("version") != 1 else "invalid_action_context")
+            value, stamp = {}, 0
+        receipt["header_stamp"] = {"sec": stamp // NANOSECONDS, "nanosec": stamp % NANOSECONDS}
+        with self.lock:
+            self._remember_timing("action_context", receipt, value)
+            self.last_home_phase=value.get("phase")
+            if getattr(self,"home_contract",None) is not None and stamp:
+                state_source = {**receipt,"header_stamp":{
+                    "sec":value["observed_state"]["response_system_ns"]//NANOSECONDS,
+                    "nanosec":value["observed_state"]["response_system_ns"]%NANOSECONDS},
+                    "header_semantics":"RTDE_response_availability_not_sensor_sample_time"}
+                self.state=(measured,receipt["callback_monotonic_ns"]/NANOSECONDS)
+                self._remember_timing("state",state_source,measured)
+                qp=value.get("qp_action")
+                if qp and qp["stamp_ns"]>self.home_qp_action_stamp:
+                    target=vector(qp["target_rad"]).astype(np.float32)
+                    self.home_qp_action_stamp=qp["stamp_ns"]
+                    source={**receipt,"header_stamp":{"sec":qp["stamp_ns"]//NANOSECONDS,
+                        "nanosec":qp["stamp_ns"]%NANOSECONDS},
+                        "header_semantics":"QP_post_SDK_return_target_via_collection_source"}
+                    self.action=(target,receipt["callback_monotonic_ns"]/NANOSECONDS)
+                    self._remember_timing("action",source,target)
 
     def snapshot(self):
         with self.lock:
@@ -217,6 +271,9 @@ class Indy7Observations(Node):
         system = time.time_ns()
         clock = self._receiver_clock()
         return {"sample_monotonic_ns": mono, "sample_system_time_ns": system,
+                "require_action_context": getattr(self, "require_action_context", False),
+                "require_home_complete": getattr(self, "require_home_complete", False),
+                "home_capture_profile": self.home_contract.profile if getattr(self,"home_contract",None) else None,
                 "clock_read_span_ns": time.monotonic_ns() - mono,
                 "receiver_clock": clock, "sources": self.source_timing.copy()}
 
@@ -280,7 +337,9 @@ class PendingStart:
             if now >= first_frame_ns:
                 return self.cancel("start_receive_deadline_exceeded: first recording release reached")
             validation_history = {**history, "gripper_carry": self.initial_gripper}
-            aligner = HistoryAligner.prepare(self.options, validation_history, self.request_timing)
+            profile = self.request_timing.get("home_capture_profile")
+            live = LiveHomeContract(profile["evidence_id"],profile=profile) if profile else None
+            aligner = HistoryAligner.prepare(self.options, validation_history, self.request_timing, home_contract=live)
             # prepare validates the fixed epoch; also verify the actual paired
             # clock reading after reception, without changing the start epoch.
             aligner.check_integrity(history, timing)
@@ -372,6 +431,10 @@ class EpisodeSession:
                          "alignment_mode": "bounded_history" if aligner else "offline_direct_frame",
                          "sync_options": asdict(aligner.options) if aligner else None,
                          "integrity": self.integrity,
+                         "home_action_acceptance": ("live_qdes_profile_v1" if aligner and type(aligner.context_guard.contract) is LiveHomeContract else
+                            "simulated_fixture_only" if aligner and aligner.context_guard.contract else "live_locked"),
+                         "home_capture_profile": (timing or {}).get("home_capture_profile"),
+                         "home_return_required": bool((timing or {}).get("require_home_complete", False)),
                          "clock_policy": "Operator verified Unix-epoch headers; paired start anchors a system reference grid. Monotonic controls release deadlines. Header-minus-monotonic is never used."}
         if self.collection:
             self.metadata["collection"] = self.collection.context()
@@ -571,6 +634,7 @@ class EpisodeSession:
             return self.stop()
         try:
             self.aligner.check_integrity(history, timing)
+            self.metadata["action_context_stop"] = self.aligner.finish_context(history, timing)
             due = (timing["sample_monotonic_ns"] - self.deadline.started_ns) * self.fps // NANOSECONDS
             # One currently due release can be cancelled by the user's end
             # command. Two or more mean a full earlier grid slot was missed.
@@ -811,7 +875,12 @@ def main(argv=None, *, frontend=None) -> int:
     parser.add_argument("--camera-317-topic", default="/camera_317222074298/camera/color/image_raw")
     parser.add_argument("--camera-844-topic", default="/camera_844212071939/camera/color/image_raw")
     parser.add_argument("--state-topic", default="/joint_states")
+    parser.add_argument("--home-profile",type=Path,default=os.environ.get("SIRLAB258_HOME_PROFILE"),
+                        help="measured collection-only Home qdes profile; starts a read-only source")
+    parser.add_argument("--no-home-capture",action="store_true",help="use the original QP-only recording source")
     parser.add_argument("--action-topic", default="/capstone/teleop_action")
+    parser.add_argument("--require-home-complete", action="store_true",
+                        help="require a verified Home endpoint before saving; automatic with a measured Home profile")
     parser.add_argument("--gripper-topic", default="/capstone/gripper_state")
     parser.add_argument("--resume", action="store_true", help="append to an existing compatible dataset")
     parser.add_argument("--collection-dir", type=Path, help="enable fixed-plan formal Core-108 collection in this directory")
@@ -819,6 +888,9 @@ def main(argv=None, *, frontend=None) -> int:
         parser.add_argument("--" + name.replace("_", "-"), type=int if name == "history_size" else float,
                             default=default)
     args = parser.parse_args(argv)
+    home_contract = None
+    if args.home_profile and not args.no_home_capture:
+        home_contract = LiveHomeContract.load(args.home_profile)
 
     collection = None
     if args.collection_dir:
@@ -895,7 +967,10 @@ def main(argv=None, *, frontend=None) -> int:
             args.action_topic,
             args.gripper_topic,
             sync_options,
+            **({"context_topic":LIVE_CONTEXT_TOPIC} if home_contract else {}),
         )
+        node.home_contract = home_contract
+        node.require_home_complete = args.require_home_complete or home_contract is not None
     except BaseException:
         try:
             if rclpy.ok():
@@ -905,6 +980,11 @@ def main(argv=None, *, frontend=None) -> int:
                 collection.close()
         raise
     commands = _commands() if frontend is None else frontend.commands
+    home_reader = None
+    if home_contract:
+        from ai.record.home_source import ReaderProcess
+        home_reader=ReaderProcess(args.home_profile)
+        home_reader.start()
     session = EpisodeSession(pending_root, open_dataset, args.fps, args.task, collection=collection) if collection else EpisodeSession(pending_root, open_dataset, args.fps, args.task)
     starter = PendingStart(sync_options)
     quit_requested = False
@@ -1035,6 +1115,8 @@ def main(argv=None, *, frontend=None) -> int:
                     emit(ui.invalid(session))
             else:
                 delay = min(period / 4, 0.01)
+                if home_contract:
+                    delay = min(delay,0.001)  # Drain 60 RGB + 20 paired-source callbacks/s.
                 if session.state == "RECORDING":
                     delay = min(delay, max(0.0, (session.deadline.next_ns - time.monotonic_ns()) / NANOSECONDS))
                 elif starter.active:
@@ -1059,6 +1141,7 @@ def main(argv=None, *, frontend=None) -> int:
             node.destroy_node()
         finally:
             rclpy.shutdown()
+            if home_reader:home_reader.close()
             if collection:
                 collection.close()
     return 1 if session.save_failed else 0

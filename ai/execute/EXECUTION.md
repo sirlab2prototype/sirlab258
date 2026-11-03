@@ -5,6 +5,12 @@ return are available through `act task`; see [TASK_EXECUTOR.md](TASK_EXECUTOR.md
 Real Task/Home activation remains locked. The APIs below remain the ACT phase
 controller used by that orchestrator.
 
+Home를 정책이 직접 학습하는 시연의 수집 계약은
+[ACT Home recording](../../docs/ACT_HOME_RECORDING.md)을 따른다.
+`ai.home_action.completion_status`는 독립 task 성공/Home 도착/정지/명령권 반환을 구분하는
+수동 상태 인터페이스다. 기존 별도 Mock Home Task 흐름을 learned-return 경로로 바꾸지
+않았다. 장비별 qdes 실측과 수동 Home 수집은 활성화했지만, qdes→절대 Teleop 재현과 Real ACT 실행은 미검증·잠금 상태다.
+
 ## Commands and boundaries
 
 ```bash

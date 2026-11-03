@@ -33,7 +33,25 @@ def recording_clock(seconds):
 def fault_text(reason, topic=None, *, starting=False):
     target = {"camera_317222074298": "Camera A 영상", "camera_844212071939": "Camera B 영상",
               "state": "로봇 관측 상태", "robot_state": "로봇 관측 상태"}.get(topic, "관측 데이터")
-    if reason == "missing_causal_observation":
+    context_errors = {
+        "missing_action_context": "QP 수집 상태(/capstone/action_context)를 수신하지 못했습니다. QP와 Recorder의 실행 버전을 확인하세요.",
+        "missing_initial_action_context": "녹화 시작 기준의 QP 수집 상태가 없습니다. 같은 버전의 QP 상태 수신을 확인하세요.",
+        "stale_action_context": "QP 수집 상태 갱신이 중단되었거나 지연되었습니다.",
+        "action_context_gap": "QP 수집 상태 메시지가 누락되었습니다. 연결과 실행 버전을 확인하세요.",
+        "action_context_publisher_changed": "녹화 중 QP 발행 프로세스가 변경되었습니다.",
+        "invalid_action_context": "QP 수집 상태 형식이 맞지 않습니다. QP와 Recorder의 실행 버전을 확인하세요.",
+        "action_context_protocol_mismatch": "QP 수집 상태의 프로토콜 버전이 맞지 않습니다. 같은 프로젝트 버전인지 확인하세요.",
+        "unverified_home_action": "미검증 Home 구간이 포함되어 저장할 수 없습니다. 기존 수집은 Home 전에 녹화를 종료하세요.",
+        "live_home_action_locked": "실물 Home Action 수집은 검증 전 잠금 상태입니다.",
+        "recording_started_during_home": "Home 처리 중에는 기존 시연 녹화를 시작할 수 없습니다.",
+        "home_failed_or_cancelled": "Home 실패·취소 또는 미검증 상태가 포함되어 저장할 수 없습니다.",
+        "recording_ended_before_home_complete": "Home 완료가 확인되기 전에 녹화가 종료되어 저장할 수 없습니다.",
+        "required_home_endpoint_missing": "필수 Home 종료 조건이 확인되지 않아 저장할 수 없습니다.",
+        "qp_action_during_home": "Home 중 QP 목표가 함께 수신되어 저장할 수 없습니다.",
+    }
+    if reason in context_errors:
+        text = context_errors[reason]
+    elif reason == "missing_causal_observation":
         text = f"{target}의 시작 기준 데이터를 확인하지 못했습니다."
     elif reason == "observation_too_old":
         text = f"{target}이 허용 지연을 초과했습니다."
@@ -100,6 +118,8 @@ def operator_fields(view):
     mode = "교정 시연" if view.get("demonstration_type") == "correction" and view.get("pending") else "일반 시연"
     if mode == "교정 시연":
         mode += " · 마커 대응 대기" if (view.get("correction") or {}).get("start_frame_index") is None else " · 마커 기록됨"
+    if view.get("home_capture"):
+        mode += " · Home 포함"
     target = ""
     if state in ("REVIEW", "SAVING"):
         target = "저장 대상 · " + ("Correction" if view.get("demonstration_type") == "correction" else "Success")
@@ -114,6 +134,12 @@ def operator_fields(view):
               else DEFAULT_NOTICE[state])
     if view.get("custom_plan") and state == "READY" and (not stats or stats["success"] != total):
         notice = "계획 조건에 맞게 준비 후 녹화를 시작하세요."
+    if view.get("home_capture"):
+        if state=="READY":notice += " Home 복귀까지 녹화한 뒤 종료하세요."
+        if state=="RECORDING" and view.get("home_phase") in ("HOME_REQUESTED","HOME_MOVING","HOME_SETTLING"):
+            notice="Home 복귀 구간을 녹화하고 있습니다."
+        if state=="RECORDING" and view.get("home_phase")=="HOME_COMPLETE":
+            notice="Home 도착을 확인했습니다. 녹화를 종료하고 실제 작업 결과를 확인하세요."
     return {"progress": progress, "state": name, "state_color": color,
             "elapsed": recording_clock(view.get("elapsed_s", 0)), "mode": mode,
             "target_note": target, "default_notice": notice, "alert": alert}

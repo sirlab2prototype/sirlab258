@@ -4,6 +4,7 @@
 
 ```text
 outputs/
+├── training_snapshots/      # act snapshot: 독립 학습 Dataset, 원본과 별도
 ├── act_gui_integration_test/   # 기존 위치 유지: 실제 Recorder 통합 테스트
 ├── preserved/
 │   ├── integration/          # 향후 보존할 통합 결과; 현재 비어 있음
@@ -65,3 +66,9 @@ Correction 학습·다중 Dataset 학습은 현재 지원하지 않는다.
 
 이동 대응표와 전후 파일 목록·SHA-256은 `tmp/outputs_cleanup_vv70otzr/`에 보존한다.
 상세 이동 목록은 `moves.json`, 기존 자료 무변경 대조는 `verification.json`을 확인한다.
+
+## 학습 Snapshot
+
+`act snapshot`은 `outputs/training_snapshots/<name>/`에 성공 Dataset을 고정한다.
+단일 입력은 독립 복사, 다중 입력은 공식 LeRobot 병합이다. Snapshot은 원본 Collection을
+대체하지 않으며 자동 삭제 대상이 아니다. [Snapshot 사용법](../ai/train/SNAPSHOTS.md)을 따른다.

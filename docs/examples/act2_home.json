@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "dataset_id": "act2_001_901",
+  "robot": "indy7",
+  "policy": "act",
+  "action": {"id": "act2", "description": "Table A to table B, release, retreat, and return Home"},
+  "plan": {
+    "version": 1, "id": "home_pilot", "description": "Example only; hardware validation required",
+    "kind": "custom",
+    "conditions": [{"condition_id": 1, "collection_order": 1,
+      "description": "Approved A to B placement and Home path",
+      "fields": {"source": "table A", "destination": "table B", "end": "Home"}}]
+  }
+}

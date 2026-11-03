@@ -51,6 +51,7 @@ Checkpoint → Synthetic/ROS 관측 Dry Run → Mock Execution/Task → 별도 �
 | --- | --- |
 | `indy`, `indy driver`, `indy teleop` | 실제 장비 운영. [Teleop/장비 가이드](docs/TELEOP.md) |
 | `act record` / 기존 `--collection-dir` | [수집·저장·재개·reconcile](ai/record/COLLECTION.md) |
+| `act snapshot` | [학습 Snapshot 복사·공식 병합](ai/train/SNAPSHOTS.md) |
 | `act validate`, `act train` | [검증 기준](ai/train/VALIDATION.md), [학습·재개·Checkpoint](ai/train/TRAINING.md) |
 | `act infer` | [Synthetic/ROS 관측 Dry Run](ai/serve/INFERENCE.md) |
 | `act execute`, `act task` | [Mock 실행 계층](ai/execute/EXECUTION.md), [Task/Home](ai/execute/TASK_EXECUTOR.md) |
@@ -83,7 +84,7 @@ act --help
 
 `indy`는 카메라를 제외한 Indy7·Mark7·Xbox/QP·GUI와 `driver`/`teleop`·기존 ROS launch 인자를 지원한다.
 `indy cam`은 제거했다. 별도 터미널에서 `camera` 또는 `cam1`/`cam2`를 실행한다.
-`act`의 인자 없는 실행은 도움말이며 `record/train/validate/infer/execute/task/evaluate`를 지원한다.
+`act`의 인자 없는 실행은 도움말이며 `record/snapshot/train/validate/infer/execute/task/evaluate`를 지원한다.
 `act record` 인자 없음은 데이터셋 GUI, 인자 있음은 기존 터미널 Recorder다.
 `omy`는 `/opt/workspace/omy`의 기존 컨테이너·Zenoh 사전 점검만 수행한다.
 `status/doctor/logs`를 지원하며 시작·정지·재시작·Leader/Follower 자동 구동은 제공하지 않는다.

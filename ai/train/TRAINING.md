@@ -58,6 +58,12 @@ recorded in the actual train config. `--dev-small` changes Transformer sizes
 for functional tests; it retains the real two VGA RGB inputs and ResNet18.
 CPU mode disables AMP. Synthetic smoke accuracy is not a model-quality claim.
 
+## 고정된 Snapshot 입력
+
+수집을 계속하는 원본 대신 `act snapshot`으로 독립 Dataset을 만든 뒤 그 루트를
+`--dataset-dir`에 지정할 수 있다. 단일·다중 입력, repo id와 출처는
+[Snapshot 사용법](SNAPSHOTS.md)을 따른다. 기존 학습 preflight와 실행 방식은 동일하다.
+
 ## Preflight and split
 
 The existing read-only Validator runs before Dataset loading or optimization.

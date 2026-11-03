@@ -109,8 +109,15 @@ notes도 입력할 수 있다. 카메라에서 좌표를 추정하지 않는다.
 s에서 배치를 동결한다. 시작 검증 실패 시 PREPARED Attempt를 유지하고 s 재시도는 같은
 번호를 사용한다. 배치를 바꾸려면 d로 준비 시도를 폐기한 뒤 새 Attempt를 시작한다.
 
-기존 운영 규칙대로 **Home 복귀 전에 r**로 종료한다. Home을 기록 Action에 추가하지 않는다.
-Mark7 초기 관측이 필요하다는 조건은 유지하며 임의 gripper 값으로 우회하지 않는다.
+활성 장비별 Home 프로필을 사용하는 `act record`는 Home 도착 확인 후 r로 종료한다.
+기존 QP context와 읽기 전용 recording_context를 검증하며 Home 누락/실패/조기 종료는
+INVALID로 차단한다. 상세는 [Home 수집](../../docs/ACT_HOME_RECORDING.md)을 따른다.
+기존 Collection/계획은 변환하지 않는다. Home 없는 종전 터미널 수집은
+`--no-home-capture`로 실행하고 Home 전에 r로 끝낸다.
+
+다만 같은 버전의 QP context가 필요하다. 현재 루트 `./act-record`는 없으므로 지원 진입점
+`act record` 또는 `./scripts/bin/act-record`를 사용한다. 비연결 버전 점검과 실제 장비 앞
+절차는 [호환성/관찰 가이드](../../docs/RECORDER_COMPATIBILITY_AND_QDES_OBSERVATION.md)를 따른다.
 
 ## 저장·폐기·진행률
 

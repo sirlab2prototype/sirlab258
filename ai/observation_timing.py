@@ -5,6 +5,7 @@ No ROS, Dataset, disk recording, robot control or GPU imports.
 from collections import deque
 from dataclasses import asdict, dataclass
 import numpy as np
+from ai.home_action import ActionContextGuard, HomeActionError
 
 NANOSECONDS = 1_000_000_000
 
@@ -107,6 +108,8 @@ class BoundedHistory:
                  "receiver_clock": source["receiver_clock"],
                  "clock_read_span_ns": source.get("clock_read_span_ns", 0)}
         try:
+            if source.get("input_error"):
+                raise IntegrityError(source["input_error"], topic=name)
             _check_clock(local, self.last_clock, self.options)
             if name != "gripper":
                 header = _header_ns(source)
@@ -178,12 +181,15 @@ class HistoryAligner:
     publication, NOT controller execution time. Headerless gripper events use
     the recorder's monotonic receipt boundary, not invented publisher stamps.
     """
-    def __init__(self, options, start_timing, initial_state, gripper):
+    def __init__(self, options, start_timing, initial_state, gripper, home_contract=None):
         self.options = options
         _check_clock(start_timing, None, options)
         self.anchor = start_timing
         self.start_mono = start_timing["sample_monotonic_ns"]
         self.start_system = start_timing["sample_system_time_ns"]
+        self.context_guard = ActionContextGuard(self.start_system,
+            required=start_timing.get("require_action_context", False), home_contract=home_contract,
+            require_home_complete=start_timing.get("require_home_complete", False))
         self.target = np.asarray(initial_state, dtype=np.float32).copy()
         self.initial_state_source = start_timing.get("sources", {}).get("state")
         self.action_source = None
@@ -198,14 +204,14 @@ class HistoryAligner:
             raise IntegrityError("unknown_initial_gripper")
 
     @classmethod
-    def prepare(cls, options, history, timing):
+    def prepare(cls, options, history, timing, home_contract=None):
         system = timing["sample_system_time_ns"]
         states = [(value, source) for value, source in history["items"].get("state", ())
                   if source.get("history_error") is None and _header_ns(source) <= system]
         if not states:
             raise IntegrityError("no_initial_state")
         value, _ = max(states, key=lambda item: _header_ns(item[1]))
-        instance = cls(options, timing, value, history["gripper_carry"])
+        instance = cls(options, timing, value, history["gripper_carry"], home_contract)
         instance.fault_overflow_baseline = history["fault_overflows"]
         selected, _, _ = instance.select(history, timing, timing["sample_monotonic_ns"], system, allow_start=True)
         instance.initial_state_source = selected["state"][1]
@@ -245,7 +251,7 @@ class HistoryAligner:
                 raise IntegrityError("observation_too_old", topic=name, age_ns=age, limit_ns=limit)
             selected[name] = (value, {**source, "reference_age_ns": age,
                                      "reference_age_clock": "unix_epoch_header",
-                                     "header_semantics": "before_SDK_get_control_data" if name == "state" else "D435_global_time_header",
+                                     "header_semantics": source.get("header_semantics", "before_SDK_get_control_data" if name == "state" else "D435_global_time_header"),
                                      "selection": "latest_header_at_or_before_reference"})
         stamps = [_header_ns(selected[name][1]) for name in ("camera_317222074298", "camera_844212071939", "state")]
         camera_skew = abs(stamps[0] - stamps[1])
@@ -253,6 +259,10 @@ class HistoryAligner:
             raise IntegrityError("camera_skew", skew_ns=camera_skew)
         if max(stamps) - min(stamps) > self.options.ns("observation_skew_ms"):
             raise IntegrityError("observation_skew", skew_ns=max(stamps) - min(stamps))
+        try:
+            context = self.context_guard.update(history, reference_system_ns, starting=allow_start)
+        except HomeActionError as exc:
+            raise IntegrityError(str(exc)) from exc
         actions = history["items"].get("action", ())
         expected = self.action_seen + 1
         future_pending = False
@@ -287,6 +297,24 @@ class HistoryAligner:
             value, source = max(candidates, key=lambda item: (_header_ns(item[1]), item[1]["receipt_sequence"]))
             if held is None or _header_ns(source) >= _header_ns(held):
                 self.target, self.action_source = value, source
+        qp_after_complete = (context is not None and context["phase"]=="HOME_COMPLETE" and candidates and
+            max(_header_ns(source) for _,source in candidates)>=context["transition_ns"])
+        if qp_after_complete:
+            self.context_guard.complete=False
+        if context is not None and context["phase"].startswith("HOME_") and not qp_after_complete:
+            if any(_header_ns(source) >= self.context_guard.home_start_ns for _, source in candidates):
+                raise IntegrityError("qp_action_during_home")
+            try:
+                self.target = self.context_guard.contract.target(context, reference_system_ns, stamps[2])
+            except HomeActionError as exc:
+                raise IntegrityError(str(exc)) from exc
+            end = context["sample"]["response_system_ns"]
+            self.action_source = {**self.context_guard.source,
+                "header_stamp": {"sec": end // NANOSECONDS, "nanosec": end % NANOSECONDS},
+                "kind": "home_qdes", "sample": context["sample"],
+                "header_semantics": "RPC_response_availability_not_controller_sample_time"}
+        elif context is not None and self.action_source is not None and self.action_source.get("kind") == "home_qdes":
+            raise IntegrityError("home_to_qp_action_gap")
         gripper_candidates = [item for item in history["items"].get("gripper", ())
                               if item[1]["callback_monotonic_ns"] <= reference_mono_ns]
         carry = history["gripper_carry"]
@@ -312,13 +340,31 @@ class HistoryAligner:
         if self.action_source is not None:
             selected["action"] = (self.target, {**self.action_source,
                                                 "reference_age_ns": reference_system_ns - _header_ns(self.action_source)})
-        origin = {"kind": "initial_hold" if self.action_source is None else "qp_target",
+        origin = {"kind": "initial_hold" if self.action_source is None else self.action_source.get("kind", "qp_target"),
                   "source": self.action_source, "held_from_previous_reference": held is self.action_source,
                   "hold_start_system_ns": self.start_system if self.action_source is None else _header_ns(self.action_source),
                   "definition": "absolute_joint_target_rad; QP header is after SDK return, not execution time"}
+        if context is not None:
+            selected["action_context"] = (context, {**self.context_guard.source,
+                "reference_age_ns": reference_system_ns - context["stamp_ns"],
+                "header_semantics": "publisher_host_time_not_controller_sample_time"})
+            origin["action_context"] = context
+            origin["action_state_skew_ns"] = (None if self.action_source is None else
+                abs(_header_ns(self.action_source) - stamps[2]))
         return selected, {"reference_system_time_ns": reference_system_ns,
                           "reference_monotonic_ns": reference_mono_ns,
                           "camera_skew_ns": camera_skew, "observation_skew_ns": max(stamps) - min(stamps),
                           "history_counts": history["counts"], "recorded_action": origin,
                           "ignored_pre_episode_actions": self.ignored_pre_episode_actions,
                           "last_ignored_action_source": self.last_ignored_action_source}, self.target
+
+    def finish_context(self, history, timing):
+        """Check the stop boundary too, including Home begun after last frame."""
+        try:
+            context = self.context_guard.update(history, timing["sample_system_time_ns"], finishing=True)
+            if context and context["phase"].startswith("HOME_"):
+                self.context_guard.contract.target(context, timing["sample_system_time_ns"],
+                                                   timing["sample_system_time_ns"])
+            return context
+        except HomeActionError as exc:
+            raise IntegrityError(str(exc)) from exc
