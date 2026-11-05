@@ -180,6 +180,37 @@ class SafetyGuard:
         if np.any(np.abs((velocity - old_velocity) / dt) > cfg.max_acceleration_rad_s2): raise SafetyError("command_acceleration_limit")
         return velocity
 
+    def bounded_target(self, value, feedback, now_ns):
+        """Update one live target per existing tick; no extra queue or delayed replay.
+
+        The first raw action keeps its existing step/range/distance ceilings;
+        only its emitted command is rate limited. Raw unreachable/remote
+        targets are rejected before adjustment. All commands go through check().
+        """
+        cfg=self.config;target=value[:6]
+        if np.any(target<cfg.joint_min_rad) or np.any(target>cfg.joint_max_rad):
+            raise SafetyError('raw_target_joint_limit')
+        envelope=np.minimum(cfg.max_target_error_rad,cfg.tracking_error_rad)
+        if np.any(abs(target-feedback.joints)>envelope):
+            raise SafetyError('raw_target_current_error')
+        first=self.previous_target is None
+        if first and np.any(abs(target-feedback.joints)>cfg.max_step_rad):
+            raise SafetyError('raw_first_joint_step_limit')
+        dt=.05 if first else min(.05,(now_ns-self.previous_send_ns)/1e9)
+        if dt<=0:raise SafetyError('command_time_not_increasing')
+        previous=feedback.joints if first else self.previous_target
+        previous_velocity=feedback.velocity if first else self.previous_velocity
+        vmax=np.minimum(cfg.max_velocity_rad_s,np.asarray(cfg.max_step_rad)/dt)
+        lo=np.maximum(-vmax,previous_velocity-np.asarray(cfg.max_acceleration_rad_s2)*dt)
+        hi=np.minimum(vmax,previous_velocity+np.asarray(cfg.max_acceleration_rad_s2)*dt)
+        # Stay inside bounds through floating-point q+v*dt / subtraction roundtrips.
+        margin=64*np.finfo(float).eps*(1+abs(previous)/dt+vmax+abs(previous_velocity))
+        lo=lo+margin;hi=hi-margin
+        if np.any(lo>hi):raise SafetyError('no_feasible_bounded_command')
+        desired=(target-previous)/dt
+        result=value.copy();result[:6]=previous+np.clip(desired,lo,hi)*dt
+        return result
+
     def commit(self, record, value, velocity, sent_ns):
         self.previous_target = value[:6].copy()
         self.previous_velocity = velocity.copy()

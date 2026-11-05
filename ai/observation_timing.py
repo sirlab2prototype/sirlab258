@@ -85,6 +85,20 @@ def _header_ns(source):
     return value
 
 
+def nearest_fresh_camera_pair(history, reference_system_ns, options):
+    """Return actual buffered frames within the existing age/skew limits, or None."""
+    cameras = ("camera_317222074298", "camera_844212071939")
+    fresh = [[(value, source, _header_ns(source)) for value, source in history["items"].get(name, ())
+              if source.get("history_error") is None and
+              0 <= reference_system_ns - _header_ns(source) <= options.ns("camera_max_age_ms")]
+             for name in cameras]
+    pairs = [(abs(left[2]-right[2]), -min(left[2],right[2]), left, right)
+             for left in fresh[0] for right in fresh[1]]
+    if not pairs:return None
+    skew, _, left, right = min(pairs, key=lambda pair:(pair[0],pair[1]))
+    return (left,right) if skew <= options.ns("camera_skew_ms") else None
+
+
 class BoundedHistory:
     """Arrival-ordered references to immutable RGB/vectors, bounded by count AND age.
 
@@ -181,8 +195,9 @@ class HistoryAligner:
     publication, NOT controller execution time. Headerless gripper events use
     the recorder's monotonic receipt boundary, not invented publisher stamps.
     """
-    def __init__(self, options, start_timing, initial_state, gripper, home_contract=None):
+    def __init__(self, options, start_timing, initial_state, gripper, home_contract=None, *, camera_pair_strategy="latest"):
         self.options = options
+        self.camera_pair_strategy = camera_pair_strategy
         _check_clock(start_timing, None, options)
         self.anchor = start_timing
         self.start_mono = start_timing["sample_monotonic_ns"]
@@ -204,14 +219,15 @@ class HistoryAligner:
             raise IntegrityError("unknown_initial_gripper")
 
     @classmethod
-    def prepare(cls, options, history, timing, home_contract=None):
+    def prepare(cls, options, history, timing, home_contract=None, *, camera_pair_strategy="latest"):
         system = timing["sample_system_time_ns"]
         states = [(value, source) for value, source in history["items"].get("state", ())
                   if source.get("history_error") is None and _header_ns(source) <= system]
         if not states:
             raise IntegrityError("no_initial_state")
         value, _ = max(states, key=lambda item: _header_ns(item[1]))
-        instance = cls(options, timing, value, history["gripper_carry"], home_contract)
+        instance = cls(options, timing, value, history["gripper_carry"], home_contract,
+                       camera_pair_strategy=camera_pair_strategy)
         instance.fault_overflow_baseline = history["fault_overflows"]
         selected, _, _ = instance.select(history, timing, timing["sample_monotonic_ns"], system, allow_start=True)
         instance.initial_state_source = selected["state"][1]
@@ -253,6 +269,15 @@ class HistoryAligner:
                                      "reference_age_clock": "unix_epoch_header",
                                      "header_semantics": source.get("header_semantics", "before_SDK_get_control_data" if name == "state" else "D435_global_time_header"),
                                      "selection": "latest_header_at_or_before_reference"})
+        if self.camera_pair_strategy == "nearest_fresh":
+            cameras = ("camera_317222074298", "camera_844212071939")
+            pair = nearest_fresh_camera_pair(history, reference_system_ns, self.options)
+            if pair is not None:
+                for name, (value, source, stamp) in zip(cameras, pair):
+                    selected[name] = (value, {**source, "reference_age_ns": reference_system_ns-stamp,
+                                              "reference_age_clock": "unix_epoch_header",
+                                              "header_semantics": source.get("header_semantics", "D435_global_time_header"),
+                                              "selection": "nearest_fresh_causal_camera_pair"})
         stamps = [_header_ns(selected[name][1]) for name in ("camera_317222074298", "camera_844212071939", "state")]
         camera_skew = abs(stamps[0] - stamps[1])
         if camera_skew > self.options.ns("camera_skew_ms"):

@@ -46,6 +46,8 @@ class ExecutionController:
         self.reason = None
         self.cancel_error = None
         self.submitted = self.acknowledged = 0
+        self.target_update_mode = "strict"
+        self.max_run_ns = None  # Optional Real trial wall-time cap; independent of scheduler progress.
         self.started_ns = self.last_action_ns = None
         self.scheduler_heartbeat_ns = self.inference_heartbeat_ns = None
         self.cancel_scheduler = lambda reason: None
@@ -73,6 +75,7 @@ class ExecutionController:
                 raise SafetyError("session_and_checkpoint_required")
             now = self.clock()
             feedback = self.indy.feedback(now)
+            now = self.clock()  # Cache may be replaced during the lookup.
             feedback.require(now, self.config, "idle")
             health.require(now, self.config)
             if feedback.in_motion is not False or np.any(np.abs(feedback.velocity) > self.config.stopped_velocity_rad_s):
@@ -99,6 +102,7 @@ class ExecutionController:
             if not self.is_mock and (self.config.reviewed_for_real is not True or not self.config.review_record):
                 raise SafetyError("hardware_profile_not_reviewed")
             feedback = self.indy.feedback(now)
+            now = self.clock()
             feedback.require(now, self.config, "idle")
             if feedback.in_motion is not False or np.any(np.abs(feedback.velocity) > self.config.stopped_velocity_rad_s):
                 raise SafetyError("robot_not_stopped")
@@ -126,7 +130,8 @@ class ExecutionController:
             now = self.clock()
             self.approval.require(self.session_id, self.checkpoint_id, now, self.is_mock)
             self.health.require(now, self.config)
-            self.indy.feedback(now).require(now, self.config, "joint_absolute")
+            feedback = self.indy.feedback(now)
+            feedback.require(self.clock(), self.config, "joint_absolute")
             self.started_ns = self.scheduler_heartbeat_ns = self.inference_heartbeat_ns = now
             self._state("RUNNING", "explicit_session_start")
 
@@ -139,19 +144,42 @@ class ExecutionController:
             if inference: self.inference_heartbeat_ns = self.clock()
 
     def consume(self, record):
+        timing = {"entered_ns": self.clock()}
+        # Reset per-attempt transport diagnostics; never attach the previous send.
+        if hasattr(self.indy, "last_dispatch_timing"):
+            self.indy.last_dispatch_timing = None
+        try:
+            return self._consume(record, timing)
+        finally:
+            timing["finished_ns"] = self.clock()
+            self.log("execution_dispatch_timing", session_id=self.session_id,
+                     request_id=record.get("request_id"), action_index=record.get("action_index"),
+                     schedule=record.get("schedule"), stages=timing,
+                     adapter=getattr(self.indy, "last_dispatch_timing", None), state=self.state)
+
+    def _consume(self, record, timing):
         with self.lock:
             if self.state != "RUNNING" or self.revoked.is_set(): raise SafetyError("execution_not_running")
             try:
                 self.poll()
+                timing["poll_completed_ns"] = self.clock()
                 if self.state != "RUNNING": raise SafetyError("execution_stopped_during_poll")
                 if self.pending is not None: raise SafetyError("previous_command_still_pending")
                 # poll() may refresh feedback. Validate against a time captured
                 # afterwards, rather than making that feedback appear future-dated.
                 now = self.clock()
-                feedback = self.indy.feedback(now)
+                # poll() just obtained and checked this sample while RUNNING.
+                # Guard rechecks its age at `now`; Adapter/Driver still check
+                # fresh readiness independently immediately before transmission.
+                feedback = self.last_feedback
                 value = validate_action(record, self.session_id, self.checkpoint_id, now, self.config)
+                raw_value=value.copy()
+                if self.target_update_mode=='bounded_rate':
+                    value=self.guard.bounded_target(value,feedback,now)
+                elif self.target_update_mode!='strict':raise SafetyError('unknown_target_update_mode')
                 velocity = self.guard.check(record, value, feedback, self.health, now)
                 self.last_feedback = feedback
+                timing["guard_completed_ns"] = self.clock()
                 # Mark dispatch pending BEFORE invoking a possibly slow transport.
                 self.dispatch_started_ns = now
                 self.dispatching = True
@@ -163,8 +191,10 @@ class ExecutionController:
         try:
             if self.revoked.is_set(): raise SafetyError("command_revoked_before_send")
             expires_ns = record["schedule"]["deadline_monotonic_ns"] + round(self.config.max_action_lateness_ms * 1e6)
+            timing["transport_entered_ns"] = self.clock()
             future = self.indy.send_absolute(value[:6], expires_ns=expires_ns)  # absolute radians
             completed = self.clock()
+            timing["transport_completed_ns"] = completed
             with self.lock:
                 self.submitted += 1
                 if completed - now > self.config.command_timeout_ms * 1e6: raise SafetyError("command_dispatch_over_budget")
@@ -173,7 +203,8 @@ class ExecutionController:
                 self.guard.commit(record, value, velocity, completed)
                 self.last_action_ns = completed
                 self.log("execution_joint_command", session_id=self.session_id, checkpoint_id=self.checkpoint_id,
-                         target_absolute_rad=value[:6].tolist(), request_id=record["request_id"],
+                         target_absolute_rad=value[:6].tolist(), raw_policy_target_rad=raw_value[:6].tolist(),
+                         target_update_mode=self.target_update_mode, target_adjustment_rad=(value[:6]-raw_value[:6]).tolist(), request_id=record["request_id"],
                          action_index=record["action_index"], dispatch_duration_ns=completed-now,
                          confirmation="pending", mock=self.is_mock)
             if not self.revoked.is_set(): self.gripper.request(value[6], self.clock())
@@ -188,6 +219,9 @@ class ExecutionController:
         with self.lock:
             now = self.clock()
             try:
+                if self.state=='RUNNING' and self.max_run_ns is not None and now-self.started_ns>=self.max_run_ns:
+                    self.stop('trial_duration_complete')
+                    return
                 self.gripper.poll(now)
                 if self.state == "STOPPING":
                     self._poll_stop(now)
@@ -197,6 +231,7 @@ class ExecutionController:
                     if self.mode_future.done():
                         if self.mode_future.result().success is not True: raise SafetyError("mode_request_rejected")
                         feedback = self.indy.feedback(now)
+                        now = self.clock()
                         feedback.require(now, self.config)
                         if feedback.mode in (None, "idle"): return
                         if feedback.mode != "joint_absolute": raise SafetyError("controller_mode_conflict")
@@ -212,11 +247,19 @@ class ExecutionController:
                         self.pending = None
                         self.log("execution_command_ack", session_id=self.session_id, confirmation=response.confirmation)
                 if self.state == "RUNNING":
+                    self.lease.require_owner(self.session_id)
                     self.health.require(now, self.config)
                     feedback = self.indy.feedback(now)
+                    now = self.clock()
                     self.guard.tracking(feedback, now)
                     self.last_feedback = feedback
             except Exception as exc:
+                if str(exc) in ('stale_joint', 'stale_controller_status') and 'feedback' in locals():
+                    self.log('execution_feedback_rejected', reason=str(exc), checked_monotonic_ns=now,
+                             joint_available_monotonic_ns=feedback.joint_received_ns,
+                             status_available_monotonic_ns=feedback.status_received_ns,
+                             joint_age_ns=now-feedback.joint_received_ns,
+                             status_age_ns=now-feedback.status_received_ns)
                 if self.state != "STOPPING":
                     self.fault(str(exc))
                 else:
@@ -235,11 +278,21 @@ class ExecutionController:
         try:
             if self.stop_future.result().success is not True: raise SafetyError("stop_request_failed")
             feedback = self.indy.feedback(now)
+            now = self.clock()
             try:
                 feedback.require(now, self.config, "idle")
             except SafetyError:
+                self.stop_stable_since_ns = None
                 return  # Keep STOPPING; a cached status is not stop confirmation.
-            if feedback.in_motion is not False or np.any(np.abs(feedback.velocity) > self.config.stopped_velocity_rad_s): return
+            if feedback.in_motion is not False or np.any(np.abs(feedback.velocity) > self.config.stopped_velocity_rad_s):
+                self.stop_stable_since_ns = None
+                return
+            if not self.is_mock:
+                if min(feedback.joint_received_ns,feedback.status_received_ns) <= self.stop_started_ns:
+                    self.stop_stable_since_ns = None
+                    return
+                if self.stop_stable_since_ns is None:self.stop_stable_since_ns=feedback.joint_received_ns
+                if feedback.joint_received_ns-self.stop_stable_since_ns < self.indy.stop_stable_ns:return
             if not self.gripper.settled: return
             self.stop_confirmed = True
             self.last_feedback = feedback
@@ -275,6 +328,7 @@ class ExecutionController:
             self.mode_future = None
             self.stop_started_ns = self.clock()
             self._state("STOPPING", reason)
+            self.stop_stable_since_ns = None
             owned = self.lease.owner == self.session_id and self.lease.stream is not None
             if not owned:
                 self._state("FAULT" if self.fault_latched else "STOPPED", "no_owned_motion_lease")
@@ -305,6 +359,9 @@ class ExecutionController:
                 return
             if self.state != "RUNNING": return
             now = self.clock()
+            if self.max_run_ns is not None and now-self.started_ns>=self.max_run_ns:
+                self.stop('trial_duration_complete')
+                return
             reason = None
             if self.pending is not None and now - self.pending[1] > self.config.command_timeout_ms * 1e6: reason = "controller_command_watchdog_timeout"
             elif self.dispatching and now - self.dispatch_started_ns > self.config.command_timeout_ms * 1e6: reason = "command_dispatch_watchdog_timeout"
@@ -312,6 +369,15 @@ class ExecutionController:
             elif now - self.inference_heartbeat_ns > self.config.inference_watchdog_ms * 1e6: reason = "inference_watchdog_timeout"
             elif self.last_action_ns is None and now - self.started_ns > self.config.first_action_timeout_ms * 1e6: reason = "first_action_watchdog_timeout"
             elif self.last_action_ns is not None and now - self.last_action_ns > self.config.scheduler_watchdog_ms * 1e6: reason = "action_stream_watchdog_timeout"
+            if reason is None:
+                try:
+                    self.lease.require_owner(self.session_id)
+                    self.health.require(now,self.config)
+                    feedback = self.indy.feedback(now)
+                    feedback.require(self.clock(),self.config,"joint_absolute")
+                except Exception as exc:
+                    self.fault("watchdog_readiness:"+str(exc))
+                    return
         if reason: self.fault(reason)
 
     def start_watchdog(self):
@@ -338,6 +404,6 @@ class ExecutionController:
                     "indy_stop_confirmed": self.stop_confirmed, "gripper_service_settled": self.gripper.settled,
                     "mark7_physical_stop_confirmed": None,
                     "emergency_requested": self.emergency_requested, "reason": self.reason,
-                    "lease_quarantined": self.lease.quarantined, "mock": self.is_mock,
+                    "lease_quarantined": self.lease.quarantined, "lease_persistence_error": getattr(self.lease,"persistence_error",None), "mock": self.is_mock,
                     "logging_error": self.logging_error, "scheduler_cancel_error": self.cancel_error,
                     "physical_grasp_verified": False, "physical_execution_verified": False}

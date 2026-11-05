@@ -45,10 +45,20 @@ Checkpoint → Synthetic/ROS 관측 Dry Run → Mock Execution/Task → 별도 �
 
 ## 실행 진입점과 운영 문서
 
+ACT 실물 추론의 입력 장치는 별도 터미널에서 `scripts/bin/act prepare`로 유지한다.
+기존 카메라 wrapper와 Mark7 전용 노드를 실행하며 Indy7 Driver·QP·추론 서버는 시작하지 않는다.
+프레임·설정·ROS 상태 감시는 없다. `act prepare`는 실제 Open 1회를 수행하고
+초기 명령 상태 `0.0`을 확인한다. 실행 시 물리 동작 예정임을 표시한다.
+프로세스 실행 안내는 장치·로봇 Ready 판정이 아니다. 기존 execute의 검증은 유지한다.
+다른 터미널에서 기존 Preflight → 승인된 `act execute --mode real`을 실행한다.
+ACT 정지·종료 확인 후 prepare를 Ctrl+C로 닫으면 직접 시작한 장치만 정리한다.
+상세 터미널 명령·종료 순서는 [Real 준비 절차](ai/execute/REAL_INFERENCE.md#act-prepare-입력-장치-준비)를 따른다.
+
 아래는 지원 범위 안내다. 이 문서를 읽는 것만으로 실행하지 않는다.
 
 | 진입점 | 역할·상세 문서 |
 | --- | --- |
+| `act prepare` | 기존 두 D435·Mark7 프로세스 실행·Open 1회와 상태 확인·소유 자식 유지/종료 |
 | `indy`, `indy driver`, `indy teleop` | 실제 장비 운영. [Teleop/장비 가이드](docs/TELEOP.md) |
 | `act record` / 기존 `--collection-dir` | [수집·저장·재개·reconcile](ai/record/COLLECTION.md) |
 | `act snapshot` | [학습 Snapshot 복사·공식 병합](ai/train/SNAPSHOTS.md) |

@@ -1,5 +1,21 @@
 # sirlab258 — 현재 상태와 다음 작업
 
+2026-11-05 최종 ACT 실물 Closed-loop 5초 시험:
+`outputs/temporary/inference/act_real_test_5sec_20261105T102020`의 result/summary가
+`complete`/`duration_complete`, Chunk10개, SDK ACK96회, 측정 관절 변화
+0.0249755rad, 실제 Action19.9975FPS, 기한 누락0, safety fault 없음,
+stop_confirmed=true, lease_quarantined=false를 기록했다. 해당 세션의 명령·관측·정지
+성공이며 물리 파지·작업 성공은 미검증이다. 추가 실물 실행·학습은 하지 않았다.
+
+2026-11-05 ACT 상태 신선도 후속: act_real_test_20261105T094912에서 SDK26 ACK·3 Chunk와
+실제 움직임, 정지 확인/lease 정상 반환 기록을 읽었다. 새 양쪽 RGB sequence는
+13/14→23/24→38/39, 관절2→9→19로3개 요청 모두 갱신·응답 수락을 확인했다.
+Controller의 feedback 조회 전 now와 조회 중 교체된 캐시 timestamp를 비교하면 음수
+age로 stale 판정하는 코드 경쟁을 확인·수정했다. 당시 실패 표본/검사 now는 미기록이라
+그 실행의 음수 age 자체는 확정하지 않는다. 거부 시 signed age를 기록하고 Driver의
+상태 로그도 실제 캐시 timestamp를 사용한다. 제한·Guard·정지는 유지, 집중17개 통과.
+실물/ROS/신규 학습/커밋은 없으며 실제 정상 종료 재시험이 남았다.
+
 소프트웨어 확인: 2026-11-02. 실물 정보는 날짜와 근거를 구분한다.
 작업 규칙은 [AGENTS](../AGENTS.md), 운영 진입점은 [README](../README.md)를 따른다.
 

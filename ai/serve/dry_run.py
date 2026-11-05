@@ -45,11 +45,16 @@ def check_server_identity(reply, metadata, reference=None):
 
 
 def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms=250, startup_timeout=5.,
-                max_lateness_ms=20., prefetch_steps=3, _mock_execution=None, ros_recovery=None):
-    if ros_recovery is not None and (not isinstance(source, RosSource) or _mock_execution is not None):
+                max_lateness_ms=20., prefetch_steps=3, _mock_execution=None, ros_recovery=None, _real_execution=None):
+    if ros_recovery is not None and (not isinstance(source, RosSource) or _mock_execution is not None or _real_execution is not None):
         raise ValueError("Observation recovery is restricted to ROS Dry Run without execution")
     if _mock_execution is not None and _mock_execution.is_mock is not True:
         raise ValueError("Dry Run runner permits only a Mock execution bridge")
+    if _real_execution is not None:
+        from ai.execute.real_session import RealSession
+        if _mock_execution is not None or type(_real_execution) is not RealSession or not isinstance(source, RosSource):
+            raise ValueError("Real execution requires explicit RealSession and ROS source")
+    execution = _mock_execution or _real_execution
     if not np.isfinite(duration) or duration <= 0 or startup_timeout <= 0:
         raise ValueError("Duration/startup timeout must be positive")
     session_id = uuid.uuid4().hex
@@ -73,7 +78,8 @@ def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms
             last_reception_log_ns = now
             return report
 
-    summary = {"run_id": getattr(log, "run_id", None), "session_id": session_id, "status": "failed", "dry_run": True, "robot_commands_sent": 0,
+    summary = {"run_id": getattr(log, "run_id", None), "session_id": session_id, "status": "failed", "dry_run": _real_execution is None,
+               "robot_commands_sent": 0 if _real_execution is None else None,
                "generated_chunks": None,
                "checkpoint_id": metadata["checkpoint_id"], "checkpoint": metadata["checkpoint"],
                "device": metadata.get("device"), "sync_options": asdict(source.options)}
@@ -137,7 +143,7 @@ def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms
                 check_server_identity(reply, metadata, scheduler.pending[1] if scheduler.pending else None)
                 accepted = scheduler.response(reply["session_id"], reply["request_id"], chunk, transport["client_received_monotonic_ns"])
                 log("prediction_response", session_id=session_id, accepted=accepted, response=reply, transport=transport)
-                if _mock_execution: _mock_execution.poll(inference=accepted)
+                if execution: execution.poll(inference=accepted)
                 if len(latencies) < max_metrics: latencies.append(reply["inference_ns"])
                 request_sent_ns = None
             now = time.monotonic_ns()
@@ -171,15 +177,15 @@ def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms
                 valid_observations += 1
                 if recovery:
                     recovery.valid(now)
-                if _mock_execution:
-                    _mock_execution.observe(latest[1])
-                    _mock_execution.prepare(session_id, metadata, scheduler.stop)
+                if execution:
+                    execution.observe(latest[1])
+                    execution.prepare(session_id, metadata, scheduler.stop)
                 log("observation", session_id=session_id, timing=latest[1], schedule=schedule)
             now = time.monotonic_ns()
             if recovery and latest is not None and abandoned_request is None and scheduler.state == "STOPPED":
                 scheduler.rewarm_observation()
                 warmup_started = now
-            execution_ready = _mock_execution is None or getattr(_mock_execution, "ready_for_actions", True)
+            execution_ready = execution is None or getattr(execution, "ready_for_actions", True)
             if latest and execution_ready and scheduler.needs_request(now) and latest[1]["observation_monotonic_ns"] != last_requested_reference:
                 observation, timing = latest
                 # Request bytes are encoded on the worker, never a ROS callback.
@@ -202,13 +208,14 @@ def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms
                     recovery.resumed()
                     log("observation_recovery_resumed", session_id=session_id, request_id=action["request_id"],
                         recovery=recovery.report(time.monotonic_ns()))
-                if _mock_execution: _mock_execution.consume({**action, "checkpoint_id": metadata["checkpoint_id"]})
+                if execution: execution.consume({**action, "checkpoint_id": metadata["checkpoint_id"]})
+                if _real_execution: action["dry_run"] = False
                 log("action", **action, checkpoint_id=metadata["checkpoint_id"])
                 if len(output_times) < max_metrics:
                     output_times.append(action["actual_output_monotonic_ns"])
                     latenesses.append(action["schedule"]["lateness_ns"])
-            if _mock_execution: _mock_execution.poll()
-            if _mock_execution and getattr(_mock_execution, "stop_requested", False):
+            if execution: execution.poll()
+            if execution and getattr(execution, "stop_requested", False):
                 summary.update(status="complete", reason="task_control_transition")
                 break
             time.sleep(.001)
@@ -245,14 +252,19 @@ def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms
         summary["reception_diagnostics"] = reception_report(force=True)
         summary["safety_validation"] = {"evaluated": False, "violations": None,
             "reason": "Observation-only Dry Run has no verified controller status or reviewed hardware limits"}
-        if _mock_execution:
-            summary["safety_validation"] = {"evaluated": True, "scope": "Mock execution profile only",
+        if execution:
+            summary["safety_validation"] = {"evaluated": True, "scope": "reviewed Real profile" if _real_execution else "Mock execution profile only",
                 "violations": None, "reason": "Use execution events for Guard rejection reasons"}
-        if _mock_execution:
-            summary["execution"] = _mock_execution.finish(summary.get("reason", "cleanup"), fault=summary["status"] == "failed")
-            summary["execution_mode"] = "mock"
-            if hasattr(_mock_execution, "task_result"):
-                summary["task"] = _mock_execution.task_result
+        if execution:
+            summary["execution"] = execution.finish(summary.get("reason", "cleanup"), fault=summary["status"] == "failed")
+            summary["execution_mode"] = "real" if _real_execution else "mock"
+            if _real_execution:
+                summary["controller_submitted_actions"] = summary["execution"]["controller_submitted_actions"]
+                summary["sdk_command_attempts"] = summary["execution"]["sdk_command_attempts"]
+                summary["sdk_acknowledged_actions"] = summary["execution"]["sdk_acknowledged_actions"]
+                summary["robot_commands_sent"] = summary["sdk_acknowledged_actions"]
+            if hasattr(execution, "task_result"):
+                summary["task"] = execution.task_result
                 summary["status"] = "complete" if summary["task"]["success"] else "failed"
                 summary["reason"] = summary["task"]["reason"]
             if summary["execution"]["state"] != "STOPPED" or not summary["execution"]["stop_confirmed"]:
@@ -286,7 +298,7 @@ def run_session(source, endpoint, metadata, log, *, duration=10., rpc_timeout_ms
     return summary
 
 
-def main(argv=None, *, _mock_factory=None):
+def main(argv=None, *, _mock_factory=None, _real_factory=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=("synthetic", "ros"), required=True)
     parser.add_argument("--dry-run", action="store_true", required=True)
@@ -306,10 +318,10 @@ def main(argv=None, *, _mock_factory=None):
         parser.add_argument("--" + field.name.replace("_", "-"), type=int if field.name == "history_size" else float, default=field.default)
     args = parser.parse_args(argv)
     try:
-        ros_recovery = recovery_options(args, allowed=args.source == "ros" and _mock_factory is None)
+        ros_recovery = recovery_options(args, allowed=args.source == "ros" and _mock_factory is None and _real_factory is None)
     except ValueError as exc:
         parser.error(str(exc))
-    if args.operator_initial_gripper is not None and (args.source != "ros" or _mock_factory is not None):
+    if args.operator_initial_gripper is not None and (args.source != "ros" or _mock_factory is not None or _real_factory is not None):
         parser.error("--operator-initial-gripper is permitted only for ROS Dry Run, without execution")
     if any(not np.isfinite(value) or value <= 0 for value in (args.duration, args.startup_timeout, args.rpc_timeout_ms)):
         parser.error("Duration/timeouts must be finite and positive")
@@ -330,7 +342,10 @@ def main(argv=None, *, _mock_factory=None):
         signal.signal(signal.SIGUSR1,server_lost)
     try:
         execution = None
-        if _mock_factory:
+        if _real_factory:
+            if args.source != "ros" or _mock_factory is not None: raise ValueError("Real execution requires ROS exclusively")
+            source, execution = _real_factory(options, log, metadata, args.output_dir)
+        elif _mock_factory:
             if args.source != "synthetic": raise ValueError("Mock execution uses synthetic observations only")
             source, execution = _mock_factory(options, log, metadata, args.output_dir)
         else:
@@ -339,7 +354,8 @@ def main(argv=None, *, _mock_factory=None):
         summary = run_session(source, args.endpoint, metadata, log, duration=args.duration,
                               rpc_timeout_ms=args.rpc_timeout_ms, startup_timeout=args.startup_timeout,
                               max_lateness_ms=args.max_lateness_ms, prefetch_steps=args.prefetch_steps,
-                              _mock_execution=execution, ros_recovery=ros_recovery)
+                              _mock_execution=execution if not _real_factory else None, ros_recovery=ros_recovery,
+                              _real_execution=execution if _real_factory else None)
         with (args.output_dir / "summary.json").open("x") as stream: json.dump(summary, stream, indent=2)
         print(json.dumps(summary, indent=2), flush=True)
         return 0 if summary["status"] in ("complete", "stopped") else 1

@@ -196,6 +196,45 @@ def test_ros_formatted_messages_alignment_unknown_gripper_and_stale():
     with pytest.raises(IntegrityError): source.sample(timing(500)["sample_monotonic_ns"])
 
 
+def test_act_camera_pair_uses_fresh_buffered_frames_without_changing_recorder_selection():
+    from ai.observation_timing import HistoryAligner
+    source = HistorySource()
+    current = [100]
+    source.timing = lambda: timing(current[0])
+    def add(name, header_ms, receipt_ms):
+        source.append(name, np.zeros((1,), dtype=np.uint8),
+                      {"sec": stamp(header_ms).sec, "nanosec": stamp(header_ms).nanosec},
+                      timing(receipt_ms))
+    source.append("gripper", 0., None, timing(90))
+    for name in (*contract.CAMERA_NAMES, "state"):
+        add(name, 95, 97)
+    source.begin()
+    _, initial = source.snapshot()
+    recorder_aligner = HistoryAligner.prepare(source.options, initial, timing(100))
+    add(contract.CAMERA_NAMES[0], 150, 155)
+    add(contract.CAMERA_NAMES[1], 160, 165)
+    add("state", 185, 186)
+    add(contract.CAMERA_NAMES[1], 193, 194)
+    current[0] = 198
+    _, history = source.snapshot()
+    with pytest.raises(IntegrityError, match="camera_skew"):
+        recorder_aligner.select(history, timing(198), timing(198)["sample_monotonic_ns"],
+                                timing(198)["sample_system_time_ns"])
+    _, metadata = source.sample(timing(198)["sample_monotonic_ns"])
+    assert metadata["alignment"]["camera_skew_ns"] == 10 * MS
+    assert [metadata["sources"][name]["reference_age_ns"] for name in contract.CAMERA_NAMES] == [48*MS, 38*MS]
+    assert all(metadata["sources"][name]["selection"] == "nearest_fresh_causal_camera_pair"
+               for name in contract.CAMERA_NAMES)
+    no_near_pair = {**history, "items": {**history["items"],
+                    contract.CAMERA_NAMES[1]: history["items"][contract.CAMERA_NAMES[1]][-1:]}}
+    with pytest.raises(IntegrityError, match="camera_skew"):
+        source.aligner.select(no_near_pair, timing(198), timing(198)["sample_monotonic_ns"],
+                              timing(198)["sample_system_time_ns"])
+    current[0] = 220
+    with pytest.raises(IntegrityError, match="observation_too_old"):
+        source.sample(timing(220)["sample_monotonic_ns"])
+
+
 @contextmanager
 def server_thread(service, stop_after=None):
     with socket.socket() as sock:

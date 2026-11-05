@@ -2,7 +2,13 @@
 set -eo pipefail
 ROOT="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../.." && pwd)"
 case "${1:-}" in
-  help|-h|--help|'') echo 'Usage: act {record|snapshot|train|validate|infer|execute|task|evaluate} [options]'; exit 0 ;;
+  help|-h|--help|'') echo 'Usage: act {prepare|record|snapshot|train|validate|infer|execute|task|evaluate} [options]'; exit 0 ;;
+  prepare)
+    shift
+    source /opt/ros/jazzy/setup.bash
+    source "$ROOT/ros2_ws/install/setup.bash"
+    export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+    exec "$ROOT/.venv/bin/python" -m ai.execute.prepare "$@" ;;
   record) shift; exec "$ROOT/scripts/bin/act-record" "$@" ;;
   snapshot) module=ai.train.snapshot ;;
   train) module=ai.train.run_train; export HF_HOME="${HF_HOME:-$ROOT/.hf_cache}" ;;

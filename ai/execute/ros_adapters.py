@@ -35,11 +35,13 @@ class RealActivation:
 
 class RosIndy7Adapter:
     is_mock = False
-    def __init__(self, node, feedback_provider, activation=None, *, clock=time.monotonic_ns):
+    def __init__(self, node, feedback_provider, activation=None, *, clock=time.monotonic_ns, service_name=INDY_SERVICE, command_token=""):
+        self.service_name, self.command_token = service_name, command_token
         self.node, self.provider, self.clock = node, feedback_provider, clock
         self.activation = activation or RealActivation()
         self.publisher = self.service = None
         self.permit = self.config = None
+        self.last_dispatch_timing = None
 
     def feedback(self, now_ns):
         if self.provider is None: raise SafetyError("independent_controller_readiness_provider_missing")
@@ -70,7 +72,7 @@ class RosIndy7Adapter:
         from indy_interfaces.srv import IndyService
         self.trajectory_type, self.point_type, self.service_type = JointTrajectory, JointTrajectoryPoint, IndyService
         self.publisher = self.node.create_publisher(JointTrajectory, TRAJECTORY_TOPIC, 1)
-        self.service = self.node.create_client(IndyService, INDY_SERVICE)
+        self.service = self.node.create_client(IndyService, self.service_name)
         self.permit, self.config = permit, config
 
     def request_absolute_mode(self):
@@ -82,23 +84,43 @@ class RosIndy7Adapter:
         return self.service.call_async(request)
 
     def send_absolute(self, joints_rad, *, expires_ns=None):
+        timing = {"entered_ns": self.clock(), "expires_ns": expires_ns}
+        self.last_dispatch_timing = timing
+        try:
+            return self._send_absolute(joints_rad, expires_ns, timing)
+        finally:
+            timing["finished_ns"] = self.clock()
+
+    def _send_absolute(self, joints_rad, expires_ns, timing):
         if self.permit is None or self.permit.is_set(): raise SafetyError("execution_revoked")
         if type(expires_ns) is not int or self.clock() > expires_ns: raise SafetyError("adapter_action_deadline_expired")
-        self.feedback(self.clock()).require(self.clock(), self.config, "joint_absolute")
+        self.activation.require(self.config,self.clock())
+        try:
+            self.feedback(self.clock()).require(self.clock(), self.config, "joint_absolute")
+        finally:
+            owner = getattr(self.provider, "__self__", None)
+            diagnostics = getattr(owner, "feedback_diagnostics", None)
+            if diagnostics is not None:
+                timing["provider"] = dict(getattr(diagnostics, "last", {}))
+        timing["feedback_completed_ns"] = self.clock()
         self._graph()
+        timing["graph_completed_ns"] = self.clock()
         array = np.asarray(joints_rad, dtype=float)
         if array.shape != (6,) or not np.isfinite(array).all(): raise SafetyError("invalid_absolute_rad_target")
         message = self.trajectory_type()
         message.joint_names = list(JOINT_NAMES)
         message.header.stamp = self.node.get_clock().now().to_msg()
+        if self.command_token: message.header.frame_id = f"{self.command_token}:{expires_ns}"
         point = self.point_type()
         point.positions = array.tolist()  # official driver converts rad -> degree exactly once
         point.time_from_start.sec = 0
         point.time_from_start.nanosec = 50_000_000  # driver currently ignores this field
         message.points = [point]
+        timing["message_completed_ns"] = self.clock()
         if self.permit.is_set(): raise SafetyError("execution_revoked")
         if self.clock() > expires_ns: raise SafetyError("adapter_action_deadline_expired")
         self.publisher.publish(message)
+        timing["published_ns"] = self.clock()
         result = Future()
         result.set_result(SimpleNamespace(success=True, confirmation="ros_publish_only_not_sdk_ack"))
         return result
@@ -113,7 +135,8 @@ class RosIndy7Adapter:
 
 class RosMark7Transport:
     is_mock = False
-    def __init__(self, node, initial_state_provider, authority_provider, activation=None, *, clock=time.monotonic_ns):
+    def __init__(self, node, initial_state_provider, authority_provider, activation=None, *, clock=time.monotonic_ns, service_namespace="/gripper"):
+        self.service_namespace=service_namespace.rstrip("/")
         self.node, self.initial_provider, self.authority_provider = node, initial_state_provider, authority_provider
         self.activation, self.clock = activation or RealActivation(), clock
         self.clients = None
@@ -131,14 +154,15 @@ class RosMark7Transport:
         from std_srvs.srv import Trigger
         from std_msgs.msg import Float32
         self.request_type, self.state_type = Trigger.Request, Float32
-        self.clients = {0:self.node.create_client(Trigger, "/gripper/open"),
-                        1:self.node.create_client(Trigger, "/gripper/grasp")}
+        self.clients = {0:self.node.create_client(Trigger, self.service_namespace+"/open"),
+                        1:self.node.create_client(Trigger, self.service_namespace+"/grasp")}
         # QP is inhibited/absent; ACT publishes command-state only after service success.
         self.state_publisher = self.node.create_publisher(Float32, "/capstone/gripper_state", 1)
         self.permit, self.config = permit, config
 
     def request(self, desired):
         if self.permit is None or self.permit.is_set(): raise SafetyError("execution_revoked")
+        self.activation.require(self.config,self.clock())
         self.authority_provider(self.clock()).require(self.clock(), self.config, "joint_absolute")
         if not self.clients[desired].service_is_ready(): raise SafetyError("mark7_service_unavailable")
         return self.clients[desired].call_async(self.request_type())

@@ -1,0 +1,56 @@
+{
+  "reviewed_for_real": true,
+  "review_record": "Research-team operating approval in conversation 2026-11-04 12:30 UTC for limited supervised first ACT link trial; J6 operating range correction explicitly approved later on 2026-11-04 to actual Capstone Home 90.507 deg +/-2 deg (88.507..92.507 deg). ai/execute/SAFETY_APPROVAL_PROPOSAL.md. Daily physical pose, workspace, writer and E-stop checks plus separate motor approval required.",
+  "robot_ip": "192.168.1.114",
+  "robot_serial": "PD47I7E0D002",
+  "controller_version": "3.3.2-GA12 [2026.09.15]",
+  "sdk_version": "3.4.2.2",
+  "joint_unit": "deg",
+  "authority_mode": "supervised_direct_link",
+  "direct_link_interface": "enp11s0",
+  "sdk_estop": {
+    "kind": "ga12_control_availability",
+    "captures": {
+      "clear_before": {
+        "path": "/home/sirlab2/sirlab258/tmp/real_site/normal_control_state_03.json",
+        "sha256": "4057214679d575ce0ebcd0a272d25f0e0e7b0eab4099efd5dde009e10486a218"
+      },
+      "pressed": {
+        "path": "/home/sirlab2/sirlab258/tmp/real_site/control_unavailable_01.json",
+        "sha256": "6bccacb89f7c67330d6bebcbed002c13a2dfdfdebccf7b075dd95c3ec8d2c994"
+      },
+      "clear_after": {
+        "path": "/home/sirlab2/sirlab258/tmp/real_site/control_recovered_01.json",
+        "sha256": "b87ae8413898399ffc9c6e9e86a3f83d87a5a2bd2dd7b4774bdda9e28410d650"
+      }
+    },
+    "review_record": "Same-robot stationary normal/E-stop/CONTY-recovered observations supplied by operator; not a physical E-stop performance certification",
+    "definition_reference": "Installed official indy_define.py OP_VIOLATE=2, IDLE=5, TELE_OP=17; SDK EtherCATStatus masks; controller-reported violation 262144 / EMG Button Activated. Numeric EMG mapping not independently documented; no safety_state interpretation."
+  },
+  "initial_joints_rad": [
+    9.112364024662395e-05,
+    0.6981870975481902,
+    -2.268869384529762,
+    1.570811511159389,
+    7.592182246175333e-06,
+    1.5796451461025078
+  ],
+  "initial_pose_is_project_home": true,
+  "initial_tolerance_rad": 0.008726646259971648,
+  "sdk_limit_units": {
+    "get_joint_limit_config": null,
+    "get_original_joint_limit_config": null,
+    "get_safety_limits": "deg"
+  },
+  "sdk_limit_units_review_record": "Observed +/-175,+/-215 match installed Indy7 URDF degrees; source tmp/real_site/normal_control_state_03.json sha256 4057214679d575ce0ebcd0a272d25f0e0e7b0eab4099efd5dde009e10486a218",
+  "sdk_vel_ratio": 0.8,
+  "sdk_acc_ratio": 7.0,
+  "rpc_timeout_ms": 25,
+  "stop_stable_ms": 250,
+  "stop_validation_record": "Approved first-trial software criterion: existing Home qdot <=0.01 rad/s and fresh idle stable 250 ms, stop confirmation timeout 1000 ms; existing guarded Controller quarantine on failure. This is not measured physical stop time/distance or PC/network-loss guarantee; onsite E-stop supervision required.",
+  "external_exclusion_record": "Approved supervised direct link on enp11s0 for first trial only; live route/carrier/flock/TCP/ROS checks in existing preflight/runtime, with onsite operator confirming Conty, other PCs and writers disconnected and preventing new clients throughout the trial. No kernel ACL or universal exclusion guarantee.",
+  "interlock_file": null,
+  "interlock_issuer": null,
+  "interlock_max_age_ms": 100,
+  "target_update_mode": "bounded_rate"
+}

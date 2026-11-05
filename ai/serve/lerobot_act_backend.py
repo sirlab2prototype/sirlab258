@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from pathlib import Path
+import time
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -112,11 +113,31 @@ class LeRobotActBackend:
         """Full, unnormalized ACT chunk, without consuming select_action's queue."""
         from lerobot.policies.utils import prepare_observation_for_inference
         amp = bool(self.policy.config.use_amp) and self.device.type == "cuda"
+        sync = self._torch.cuda.synchronize if self.device.type == "cuda" else lambda: None
+        if self.device.type == "cuda":
+            self._torch.cuda.reset_peak_memory_stats(self.device)
+        sync(); start = time.perf_counter_ns()
         with self._torch.inference_mode(), self._torch.autocast("cuda") if amp else nullcontext():
             batch = prepare_observation_for_inference(dict(observation), self.device, self.task or None, self.robot_type)
-            actions = self.policy.predict_action_chunk(self.preprocessor(batch))
+            sync(); prepared = time.perf_counter_ns()
+            batch = self.preprocessor(batch)
+            sync(); preprocessed = time.perf_counter_ns()
+            input_devices = sorted({str(value.device) for value in batch.values()
+                                    if isinstance(value, self._torch.Tensor)})
+            actions = self.policy.predict_action_chunk(batch)
+            sync(); predicted = time.perf_counter_ns()
             actions = self.postprocessor(actions)
-        return actions.detach().float().cpu().numpy()[0]
+            sync(); postprocessed = time.perf_counter_ns()
+        output = actions.detach().float().cpu().numpy()[0]
+        sync(); transferred = time.perf_counter_ns()
+        self.last_timing = {
+            "input_prepare_ns": prepared-start, "preprocess_ns": preprocessed-prepared,
+            "model_ns": predicted-preprocessed, "postprocess_ns": postprocessed-predicted,
+            "output_transfer_ns": transferred-postprocessed, "input_tensor_devices": input_devices,
+            "cuda_memory_allocated_bytes": self._torch.cuda.memory_allocated(self.device) if self.device.type == "cuda" else 0,
+            "cuda_memory_peak_bytes": self._torch.cuda.max_memory_allocated(self.device) if self.device.type == "cuda" else 0,
+        }
+        return output
 
     def predict(self, observation: dict[str, np.ndarray]) -> np.ndarray:
         from lerobot.utils.control_utils import predict_action

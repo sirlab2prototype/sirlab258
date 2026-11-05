@@ -1,0 +1,212 @@
+{
+  "purpose": "field-level provenance, not an approval bypass",
+  "approval_authority": "project research team; no external sign-off requirement",
+  "values": [
+    {
+      "field": "max_velocity_rad_s",
+      "value": [
+        0.7853981633974483,
+        0.7853981633974483,
+        0.7853981633974483,
+        0.7853981633974483,
+        0.7853981633974483,
+        0.7853981633974483
+      ],
+      "unit": "rad/s",
+      "source": "indy7.yaml joint_speed_deg_s=45; qp_teleop.py joint step guard",
+      "existing_physical_use": "Existing QP real operation; not ACT physical certification",
+      "ACT_application": "SafetyGuard command velocity AND measured velocity; unchanged SDK ratios",
+      "status": "adopted inherited software ceiling; whole profile unapproved"
+    },
+    {
+      "field": "max_step_rad",
+      "value": [
+        0.026179938779914945,
+        0.026179938779914945,
+        0.026179938779914945,
+        0.026179938779914945,
+        0.026179938779914945,
+        0.026179938779914945
+      ],
+      "unit": "rad/command",
+      "source": "QP45deg/s /30Hz =1.5deg/tick",
+      "existing_physical_use": "Existing QP real operation",
+      "ACT_application": "SafetyGuard checks absolute target delta; ACT20Hz retains 1.5deg so effective command ceiling <=30deg/s",
+      "status": "adopted, no relaxation"
+    },
+    {
+      "field": "initial_joints_rad",
+      "value": [
+        9.112364024662395e-05,
+        0.6981870975481902,
+        -2.268869384529762,
+        1.570811511159389,
+        7.592182246175333e-06,
+        1.5796451461025078
+      ],
+      "unit": "rad",
+      "source": "indy7.yaml capstone_home_joint_deg; verified Home completion record",
+      "existing_physical_use": "Home actual .012deg final error reported",
+      "ACT_application": "RealSession compares current feedback to exact configured Home",
+      "status": "adopted target; actual starting pose checked at runtime"
+    },
+    {
+      "field": "initial_tolerance_rad",
+      "value": 0.008726646259971648,
+      "unit": "rad",
+      "source": "qp_teleop.py Home reARM error<=.5deg; ai/home_action.py completion tolerance .5deg",
+      "existing_physical_use": "Existing actual Home validation",
+      "ACT_application": "same max absolute six-joint error check at start; freshness remains stricter",
+      "status": "adopted arrival tolerance, not dynamic tracking tolerance"
+    },
+    {
+      "field": "stop_stable_ms",
+      "value": 250,
+      "unit": "ms",
+      "source": "ai/home_action.py HomeCompletionMonitor stable_ns=250000000",
+      "existing_physical_use": "Home capture/arrival validation; not stop latency certification",
+      "ACT_application": "Controller post-request fresh idle/nonmoving/low-qdot duration check",
+      "status": "adopted stationary criterion; stop_validation_record still required"
+    },
+    {
+      "field": "stopped_velocity_rad_s",
+      "value": 0.01,
+      "unit": "rad/s",
+      "source": "ai/home_action.py stopped_rad_s=.01",
+      "existing_physical_use": "Existing Home completion monitor",
+      "ACT_application": "Controller actual low-qdot confirmation",
+      "status": "reused stationary threshold; no stopping distance claim"
+    },
+    {
+      "field": "rpc_timeout_ms",
+      "value": 25,
+      "unit": "ms",
+      "source": "ai/home_action.py max_rpc_ns=25000000; existing getter max4.91ms/4-getter cycle17.20ms",
+      "existing_physical_use": "Existing Home observation budget; not command/stop RPC latency proof",
+      "ACT_application": "DeadlineStub explicit gRPC timeout <= command budget50ms; timeout trips session",
+      "status": "adopted fail-fast software budget; command latency may require tuning based on real logs"
+    },
+    {
+      "field": "sdk_vel_ratio / sdk_acc_ratio",
+      "value": [
+        0.8,
+        7
+      ],
+      "unit": "SDK ratio",
+      "source": "official indy_driver.py movetelej_abs .8/7; QP .8/1; Home18/100",
+      "existing_physical_use": "Official absolute Driver implementation; QP/Home live use differ",
+      "ACT_application": "Guarded absolute Driver preserves official .8/7",
+      "status": "preserved existing absolute path; not a physical acceleration bound"
+    },
+    {
+      "field": "joint_min_rad",
+      "value": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "unit": "rad or rad/s^2",
+      "source": "No equivalent validated ACT operating value in current evidence",
+      "existing_physical_use": "not established",
+      "ACT_application": "existing Guard remains fail-closed",
+      "status": "pending research-team validation/approval"
+    },
+    {
+      "field": "joint_max_rad",
+      "value": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "unit": "rad or rad/s^2",
+      "source": "No equivalent validated ACT operating value in current evidence",
+      "existing_physical_use": "not established",
+      "ACT_application": "existing Guard remains fail-closed",
+      "status": "pending research-team validation/approval"
+    },
+    {
+      "field": "max_acceleration_rad_s2",
+      "value": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "unit": "rad or rad/s^2",
+      "source": "No equivalent validated ACT operating value in current evidence",
+      "existing_physical_use": "not established",
+      "ACT_application": "existing Guard remains fail-closed",
+      "status": "pending research-team validation/approval"
+    },
+    {
+      "field": "tracking_error_rad",
+      "value": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "unit": "rad or rad/s^2",
+      "source": "No equivalent validated ACT operating value in current evidence",
+      "existing_physical_use": "not established",
+      "ACT_application": "existing Guard remains fail-closed",
+      "status": "pending research-team validation/approval"
+    },
+    {
+      "field": "max_target_error_rad",
+      "value": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "unit": "rad or rad/s^2",
+      "source": "No equivalent validated ACT operating value in current evidence",
+      "existing_physical_use": "not established",
+      "ACT_application": "existing Guard remains fail-closed",
+      "status": "pending research-team validation/approval"
+    },
+    {
+      "field": "stop_timeout_ms",
+      "value": 1000,
+      "unit": "ms",
+      "source": "ACT template1000, not measured stop latency",
+      "existing_physical_use": "not established",
+      "ACT_application": "Controller confirmation timeout/quarantine",
+      "status": "pending internal review, do not confuse stable250ms with latency"
+    },
+    {
+      "field": "direct_link_interface / Writer exclusion",
+      "value": {
+        "interface": "enp11s0",
+        "other_writers_shutdown": "per-run required"
+      },
+      "unit": "interface/condition",
+      "source": "Existing direct_link route/carrier/TCP screen + QP/ACT lock + ROS graph checks",
+      "existing_physical_use": "Direct PC cable operator confirmed; current interface not queried this task",
+      "ACT_application": "runtime all checks mandatory; no kernel ACL against arbitrary new SDK client",
+      "status": "interface adopted from local kernel; Writer exclusion must pass at runtime"
+    },
+    {
+      "field": "direct_link_interface",
+      "value": "enp11s0",
+      "unit": "Linux network interface",
+      "source": "tmp/real_site/direct_link_local_evidence.json; local ip route/sysfs, source192.168.1.100 gateway none physical wired carrier",
+      "existing_physical_use": "operator confirmed direct PC cable; current local route verified, robot not contacted",
+      "ACT_application": "DirectLinkInterlock matches this physical interface at runtime and rejects foreign TCP/lock/graph conflicts",
+      "status": "adopted interface; other Writer shutdown remains a per-run requirement"
+    }
+  ]
+}

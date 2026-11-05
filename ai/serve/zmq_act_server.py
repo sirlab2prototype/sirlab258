@@ -70,6 +70,8 @@ class InferenceService:
             reply.update(shape=list(chunk.shape), output_valid=True, inference_ns=completed - started,
                          server_completed_monotonic_ns=completed,
                          observation_monotonic_ns=header["observation_monotonic_ns"], observation_age_at_receive_ns=age)
+            if getattr(self.backend, "last_timing", None):
+                reply["inference_stages"] = self.backend.last_timing
             reply["session_generated_chunks"] = self.generated_chunks
             return [json.dumps(reply).encode(), np.ascontiguousarray(chunk, dtype="<f4").tobytes()]
         except Exception as exc:

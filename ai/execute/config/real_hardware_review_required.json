@@ -1,0 +1,30 @@
+{
+  "reviewed_for_real": false,
+  "review_record": null,
+  "robot_ip": null,
+  "robot_serial": null,
+  "controller_version": null,
+  "sdk_version": null,
+  "joint_unit": "deg",
+  "authority_mode": "external_interlock",
+  "direct_link_interface": null,
+  "sdk_estop": null,
+  "initial_joints_rad": null,
+  "initial_pose_is_project_home": null,
+  "initial_tolerance_rad": null,
+  "sdk_limit_units": {
+    "get_joint_limit_config": null,
+    "get_original_joint_limit_config": null,
+    "get_safety_limits": null
+  },
+  "sdk_limit_units_review_record": null,
+  "sdk_vel_ratio": null,
+  "sdk_acc_ratio": null,
+  "rpc_timeout_ms": null,
+  "stop_stable_ms": null,
+  "stop_validation_record": null,
+  "external_exclusion_record": null,
+  "interlock_file": null,
+  "interlock_issuer": null,
+  "interlock_max_age_ms": null
+}

@@ -1,0 +1,12 @@
+{
+  "model": "Indy7",
+  "role": "manufacturer_and_installed_URDF_reference_only_not_ACT_operating_profile",
+  "joint_min_deg": [-175, -175, -175, -175, -175, -215],
+  "joint_max_deg": [175, 175, 175, 175, 175, 215],
+  "max_joint_velocity_deg_s": [150, 150, 150, 180, 180, 180],
+  "max_joint_acceleration": null,
+  "manufacturer_source": "https://s3.ap-northeast-2.amazonaws.com/landing.neuromeka.com/upload/Neuromeka_Company_Profile_EN%28videoless%29.pdf",
+  "installed_model_source": "ros2_ws/src/external/indy-ros2/indy_description/urdf_files/indy7_v3.urdf:202",
+  "actual_controller_configuration_read": false,
+  "teleop_enforcement_confirmed_for_FW_3_3_2_GA12": false
+}

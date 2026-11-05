@@ -1,9 +1,10 @@
-# Indy7 / Mark7 guarded execution (Mock verified; Real CLI locked)
+# Indy7 / Mark7 guarded execution (Mock verified; Real conditionally gated)
 
 Task 1 orchestration, explicit user completion and separate Mock project-Home
 return are available through `act task`; see [TASK_EXECUTOR.md](TASK_EXECUTOR.md).
-Real Task/Home activation remains locked. The APIs below remain the ACT phase
-controller used by that orchestrator.
+Real Task/Home activation remains locked. Explicit Real inference now has a guarded execution path;
+see [REAL_INFERENCE.md](REAL_INFERENCE.md) for native SDK status/limits/stop, qualified E-stop input, the five-second supervised direct-PC authority mode, commissioning, deployment and stop.
+The APIs below remain the ACT phase controller used by that orchestrator.
 
 Home를 정책이 직접 학습하는 시연의 수집 계약은
 [ACT Home recording](../../docs/ACT_HOME_RECORDING.md)을 따른다.
@@ -12,6 +13,49 @@ Home를 정책이 직접 학습하는 시연의 수집 계약은
 않았다. 장비별 qdes 실측과 수동 Home 수집은 활성화했지만, qdes→절대 Teleop 재현과 Real ACT 실행은 미검증·잠금 상태다.
 
 ## Commands and boundaries
+
+### Unresolved Indy7 Writer recovery (2026-11-04)
+
+QP and guarded ACT share `tmp/runtime/indy7_writer.lock`. A previous `held` or
+`quarantined` record blocks both even when no process currently holds `flock`.
+Never delete the lock file. QP shutdown now records `released` only after a
+successful stop acknowledgement and 250 ms of fresh idle, no-motion, low-qdot
+feedback; an unconfirmed exit remains quarantined.
+On 2026-11-04 a normal QP exit produced `quarantined`: the QP ACK parser expected
+`response.code`, while installed IndyDCP3 `StopTeleOp` returns top-level
+`{code,msg}`. QP and shared ACT SDK response parsing now accept that verified
+flat shape and still reject missing/nonzero ACKs. This code correction does not
+clear the existing quarantine; fresh onsite stop verification and manual
+reconciliation are required before another writer can acquire the lock.
+
+For manual reconciliation, the onsite operator first confirms the robot is
+physically stopped and Conty, other PCs, QP and SDK writers are disconnected.
+Capture fresh controller GET results without commanding motion or stop:
+
+```bash
+.venv/bin/python scripts/inspect_indy7_real_readonly.py \
+  --connect-readonly --approve-readonly "onsite operator" --ip 192.168.1.114 \
+  --phase clear_before --output tmp/real_site/writer_stop_fresh.json
+.venv/bin/python scripts/reconcile_indy7_writer.py \
+  --capture tmp/real_site/writer_stop_fresh.json --robot-ip 192.168.1.114 \
+  --operator "onsite operator" --physical-stop-and-writers-checked
+```
+
+The second command requires a valid capture no older than 60 seconds with
+three idle, stationary, low-qdot samples; it rejects local robot TCP connections
+and a held `flock`. It rewrites the same inode with an audit record and capture
+hash. Remote writer exclusion and physical space inspection remain the onsite
+operator's check. Only after reconciliation may QP acquire the writer; `indy`
+itself starts automatic ARM, so run it only under its usual supervision.
+`indy driver` publishes `/joint_states` at 20 Hz without QP, but its normal
+shutdown sends stop commands. For strictly non-actuating ACT observation,
+`scripts/publish_indy7_joint_states_readonly.py` publishes only GET feedback
+at 20 Hz for at most 180 seconds and closes SDK channels without Driver
+shutdown. It requires an onsite read-only approval label, expected serial,
+robot IP, and no other `/joint_states` publisher. It neither acquires the
+Writer lock nor exposes a command service. With two existing D435 topics and
+an operator-confirmed initial Mark7 0/1 state, `act infer --source ros --dry-run`
+can consume it; the Mark7 value is an assumption, not physical feedback.
 
 ```bash
 # Explicitly approve Mock arming/start; never hardware:
@@ -24,7 +68,7 @@ act infer --checkpoint outputs/my_act_run --source ros --dry-run
 ```
 
 No approval flag means no Mock arming. `act execute --mode real` is rejected
-before creating devices/nodes. Setup is not an execution command. The normal
+before creating devices/nodes unless explicit approval and reviewed Real profiles pass. The reviewed trial profiles still require live authority, E-stop, pose and observation checks. Setup is not an execution command. The normal
 Dry Run path never instantiates an execution controller or command adapter.
 Standalone Mock execution starts at zero joints by default. For a Checkpoint
 whose demonstrations start at project Home, supply `--mock-initial-joints` with
@@ -32,8 +76,8 @@ six absolute radians matching that fixture. Values must be finite and inside
 the configured limits; no clipping occurs. This only initializes the software
 plant before observations begin. Task Mock already uses the project Home and
 does not accept this independent-pose override. No hardware state is set/moved.
-The optional inference-runner bridge accepts Mock only; no Real adapter can be
-selected through `act infer --dry-run`. Internal Scheduler `dry_run=true` and
+The observation-only `act infer --dry-run` cannot select a Real adapter. The explicit
+`act execute --mode real` launcher selects its separate Real bridge after preflight. Internal Scheduler `dry_run=true` and
 `robot_commands_sent=0` mean hardware output is disabled; a Mock run separately
 reports `execution_mode=mock` and submitted/acknowledged Mock commands.
 
@@ -50,8 +94,12 @@ Indy7 absolute adapter / hysteretic `GripperAdapter` -> command transport.
 
 An action record must have finite numeric 7D values, current session/checkpoint
 IDs, request ID, action index and contiguous slot/deadline metadata. Joints are
-**absolute radians**, never QP-relative offsets. Invalid targets are rejected,
-not clipped. Guards cover position limits, target-current error, command step,
+**absolute radians**, never QP-relative offsets. Invalid raw targets are rejected.
+In optional `bounded_rate` mode, an allowed raw target may produce a nearer
+output within the existing step, velocity and acceleration intersection;
+the first raw target also must pass the original step ceiling. Each output
+still passes the full Guard, and the next Action uses its new raw target rather
+than replaying the old one. Guards cover position limits, target-current error, command step,
 command velocity/acceleration, measured velocity/acceleration, observation and
 joint/status freshness, external readiness/ownership, tracking persistence and
 expired/missed deadlines. Command derivatives use the smaller of the nominal
@@ -117,8 +165,8 @@ A Real adapter requires all of:
 
 There is no positive default readiness provider. Supplying true flags is a
 trusted external-provider contract, not a way this code proves physical facts.
-Real CLI remains locked until that provider and hardware safety validation are
-integrated. The adapter accepts a caller-owned ROS node and never starts a
+The explicit Real bridge supplies cached SDK status and requires a session-bound live external
+interlock or a supervised direct link plus reviewed profiles. The adapter accepts a caller-owned ROS node and never starts a
 node/executor or creates a second direct SDK writer. All real ROS imports and
 publishers/clients are deferred until the explicit activation gate passes.
 
@@ -159,6 +207,8 @@ message-preparation delay must not turn an already-expired goal into a publish.
 
 Stop is best-effort. A service success alone is insufficient. Unconfirmed stop,
 communication failure or unknown gripper completion quarantines the lease.
+Real stop stability restarts after any failed idle/readiness/freshness check or
+pre-stop-request sample; recovery must establish a new full stable interval.
 Persistent lease markers prevent a restarted process from silently taking over
 an unresolved owner. Quarantine requires manual reconciliation after independent
 verification; there is no auto-reset API. FAULT is terminal for that Controller
@@ -198,6 +248,11 @@ start time, state, session/checkpoint, submitted/acknowledged counts, last joint
 gripper state, normal completion vs user abort vs safety fault, stop confirmation,
 and lease quarantine. `executed_actions` is a Mock-only applied count; Real is
 unknown because ROS publish is not an SDK execution ACK.
+Explicit Real runs separately expose `controller_submitted_actions`,
+`sdk_command_attempts` and `sdk_acknowledged_actions`. `robot_commands_sent`
+means the last count (null when unavailable); SDK ACK still does not prove
+physical movement. Stage timing and the existing 20Hz authority refresh are
+documented in [REAL_INFERENCE](REAL_INFERENCE.md#송신-기한정지-안정-구간-수정-2026-11-05).
 
 Logs include profile/readiness proof, mode request, joint target and send timing,
 ACK level, rejection with raw goal text, gripper requests/results, state changes,

@@ -87,6 +87,15 @@ class Mark7Node(Node):
         self.device = str(
             self.get_parameter('device').value
         )
+        self.declare_parameter('publish_command_state', False)
+        self.command_state_pub = None
+        if self.get_parameter('publish_command_state').value:
+            from std_msgs.msg import Float32
+            from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+            self.command_state_type = Float32
+            self.command_state_pub = self.create_publisher(Float32, '/capstone/gripper_state',
+                QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                           durability=DurabilityPolicy.TRANSIENT_LOCAL))
         self.fd = self.open_serial(self.device)
 
         self.create_service(
@@ -207,12 +216,20 @@ class Mark7Node(Node):
             f'{parameter_name}: {positions}'
         )
 
+    def publish_command_state(self, value):
+        # Optional Real handoff: serial-write success, not physical position/grasp.
+        if getattr(self, "command_state_pub", None) is not None:
+            message = self.command_state_type()
+            message.data = value
+            self.command_state_pub.publish(message)
+
     def open_callback(self, request, response):
         try:
             self.send_preset('open_position')
 
             response.success = True
             response.message = 'Mark7 open command sent'
+            self.publish_command_state(0.0)
 
         except Exception as exc:
             response.success = False
@@ -230,6 +247,7 @@ class Mark7Node(Node):
 
             response.success = True
             response.message = 'Mark7 grasp command sent'
+            self.publish_command_state(1.0)
 
         except Exception as exc:
             response.success = False

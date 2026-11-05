@@ -115,7 +115,8 @@ class HistorySource:
 
     def begin(self):
         timing, history = self.snapshot()
-        self.aligner = HistoryAligner.prepare(self.options, history, timing)
+        self.aligner = HistoryAligner.prepare(self.options, history, timing,
+                                              camera_pair_strategy="nearest_fresh")
         self.previous_sources = {}
         return timing
 
@@ -247,7 +248,8 @@ class RosSource(HistorySource):
             raise IntegrityError("no_initial_state")
         value, source = max(states, key=lambda item: _header_ns(item[1]))
         timing["sources"]["state"] = source
-        self.aligner = HistoryAligner(self.options, timing, value, history["gripper_carry"])
+        self.aligner = HistoryAligner(self.options, timing, value, history["gripper_carry"],
+                                      camera_pair_strategy="nearest_fresh")
         self.previous_sources = {}
         return timing
 

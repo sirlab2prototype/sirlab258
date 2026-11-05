@@ -1153,30 +1153,57 @@ class QPTeleop(Node):
         # Final synchronous stop guard.
         # Do not rely on an async ROS service while destroying the node.
         try:
-            self.indy.stop_teleop()
-            self.get_logger().info(
-                'TELE_OP stop confirmed for node shutdown'
-            )
+            stop_result = self.indy.stop_teleop()
+            if not isinstance(stop_result, dict):
+                raise RuntimeError('stop_teleop was not acknowledged')
+            response = stop_result.get('response', stop_result)
+            code = response.get('code') if isinstance(response, dict) else None
+            if type(code) not in (int, str) or str(code) != '0':
+                raise RuntimeError('stop_teleop was not acknowledged')
+            deadline = time.monotonic() + 2.0
+            stable_since = None
+            while time.monotonic() < deadline:
+                control = self.indy.get_control_data()
+                motion = self.indy.get_motion_data()
+                stopped = (control.get('op_state') == 5 and
+                           motion.get('is_in_motion') is False and
+                           len(control.get('qdot', [])) == 6 and
+                           all(math.isfinite(v) and abs(v) <= math.degrees(0.01)
+                               for v in control['qdot']))
+                if stopped:
+                    stable_since = stable_since or time.monotonic()
+                    if time.monotonic() - stable_since >= 0.25:
+                        self.get_logger().info('TELE_OP stop verified for node shutdown')
+                        return True
+                else:
+                    stable_since = None
+                time.sleep(0.05)
         except Exception as exc:
-            self.get_logger().error(
-                f'Final stop_teleop failed: {exc}'
-            )
+            self.get_logger().error(f'Final stop verification failed: {exc}')
+        self.get_logger().error('Indy7 stop unverified; writer remains quarantined')
+        return False
 
 
 def main(args=None):
-    rclpy.init(args=args)
-
-    node = QPTeleop()
-
+    from .writer_lock import WriterLock
+    writer = WriterLock("qp_teleop_and_sdk_home")
+    writer.acquire()  # Before ROS/node/SDK construction and automatic ARM.
+    stop_confirmed = False
     try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.shutdown()
-        node.destroy_node()
-        rclpy.shutdown()
+        rclpy.init(args=args)
 
+        node = QPTeleop()
+
+        try:
+            rclpy.spin(node)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            stop_confirmed = node.shutdown()
+            node.destroy_node()
+            rclpy.shutdown()
+    finally:
+        writer.close(confirmed=stop_confirmed)
 
 if __name__ == '__main__':
     main()

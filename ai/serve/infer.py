@@ -19,7 +19,7 @@ from ai.serve.ros_recovery import add_recovery_arguments, recovery_options
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def main(argv=None, *, _mock_options=None):
+def main(argv=None, *, _mock_options=None, _real_options=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--source", choices=("synthetic", "ros"), required=True)
@@ -41,11 +41,12 @@ def main(argv=None, *, _mock_options=None):
         parser.add_argument("--" + field.name.replace("_", "-"), type=int if field.name == "history_size" else float, default=field.default)
     args = parser.parse_args(argv)
     try:
-        recovery = recovery_options(args, allowed=args.source == "ros" and _mock_options is None)
+        recovery = recovery_options(args, allowed=args.source == "ros" and _mock_options is None and _real_options is None)
     except ValueError as exc:
         parser.error(str(exc))
-    if args.operator_initial_gripper is not None and (args.source != "ros" or _mock_options is not None):
+    if args.operator_initial_gripper is not None and (args.source != "ros" or _mock_options is not None or _real_options is not None):
         parser.error("--operator-initial-gripper is permitted only for ROS Dry Run, without execution")
+    if _real_options and (args.source != "ros" or _mock_options): parser.error("Real execution requires ROS source")
     if _mock_options and args.source != "synthetic": parser.error("Mock execution requires synthetic source")
     if not args.checkpoint.expanduser().exists(): parser.error("Checkpoint path does not exist")
     if any(not math.isfinite(value) or value <= 0 for value in (args.duration, args.startup_timeout,
@@ -57,6 +58,7 @@ def main(argv=None, *, _mock_options=None):
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     output = (args.output_dir or ROOT / "outputs" / f"act_infer_{run_id}").expanduser().resolve()
     checkpoint = args.checkpoint.expanduser().resolve()
+    if _real_options and not output.is_relative_to(ROOT):parser.error("Real run output must be inside this project")
     if output.exists() or output.is_relative_to(checkpoint):
         raise ValueError("Output must be new and outside the Checkpoint")
     if any((parent / "meta/info.json").is_file() or (parent / "model.safetensors").is_file() for parent in (output, *output.parents)):
@@ -75,12 +77,13 @@ def main(argv=None, *, _mock_options=None):
                   "--run-id", run_id,
                   "--max-observation-age-ms", str(args.max_observation_age_ms)]
     server = client = None
-    result = {"run_id": run_id, "checkpoint": str(checkpoint), "source": args.source, "dry_run": True,
+    result = {"run_id": run_id, "checkpoint": str(checkpoint), "source": args.source, "dry_run": _real_options is None,
               "endpoint": endpoint, "status": "failed", "robot_commands_sent": 0}
     if args.operator_initial_gripper is not None:
         result["operator_initial_gripper"] = {"value": args.operator_initial_gripper, "origin": "operator_assumed",
                                               "sensor_measurement": False, "command_success_evidence": False}
     if _mock_options: result["execution_mode"] = "mock"
+    if _real_options: result.update(execution_mode="real", robot_commands_sent=None)
     if recovery is not None:
         from dataclasses import asdict
         result["ros_observation_recovery"] = asdict(recovery)
@@ -98,10 +101,13 @@ def main(argv=None, *, _mock_options=None):
                     time.sleep(.02)
             result.update(server=metadata,checkpoint_id=metadata['checkpoint_id'])
             mode_label = "Explicit Mock execution (software devices only)" if _mock_options else "Explicit Dry Run"
-            print(f"Verified inference server ready ({metadata['device']}). {mode_label} starts; no physical robot commands. Logs: {output}", flush=True)
+            if _real_options: mode_label = "Explicit REAL execution; hardware writes only after all readiness/authority gates"
+            suffix = "" if _real_options else "; no physical robot commands"
+            print(f"Verified inference server ready ({metadata['device']}). {mode_label}{suffix}. Logs: {output}", flush=True)
+            if _real_options: print(f"STOP: act execute --stop-run {output}; status: act execute --status-run {output}",flush=True)
             if _mock_options and "task_config" in _mock_options:
                 print(f"Mock Task controls: append session-bound complete/abort/emergency_stop JSON lines to {output / 'client/task_commands.jsonl'}; Session ID is in client/events.jsonl", flush=True)
-            client_args = ["-m", "ai.execute.mock_client" if _mock_options else "ai.serve.dry_run", "--source", args.source, "--dry-run", "--endpoint", endpoint,
+            client_args = ["-m", "ai.execute.real_client" if _real_options else "ai.execute.mock_client" if _mock_options else "ai.serve.dry_run", "--source", args.source, "--dry-run", "--endpoint", endpoint,
                            "--metadata", str(output / "server_ready.json"), "--output-dir", str(output / "client"),
                            "--run-id", run_id,
                            "--duration", str(args.duration), "--rpc-timeout-ms", str(args.rpc_timeout_ms),
@@ -121,6 +127,8 @@ def main(argv=None, *, _mock_options=None):
                     client_args += ["--task-config", str(_mock_options["task_config"]), "--home-path-evidence", _mock_options["path_evidence"]]
                     if _mock_options.get("complete_after_actions") is not None:
                         client_args += ["--mock-complete-after-actions", str(_mock_options["complete_after_actions"])]
+            if _real_options:
+                client_args += ["--execution-config", str(_real_options["config"]), "--hardware-profile", str(_real_options["hardware"]), "--approve-real", _real_options["approval"]]
             if args.source == "ros":
                 import shlex
                 ros_python = ROOT / ".venv/bin/python"
@@ -156,7 +164,7 @@ def main(argv=None, *, _mock_options=None):
         for process in (client, server):
             if process is not None and process.poll() is None:
                 process.terminate()
-                try: process.wait(timeout=3)
+                try: process.wait(timeout=(_real_options["stop_timeout_s"]+2 if _real_options else 3))
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
@@ -167,6 +175,7 @@ def main(argv=None, *, _mock_options=None):
             try:
                 summary=json.loads(summary_path.read_text())
                 result['client']=summary
+                if _real_options: result['robot_commands_sent']=summary.get('robot_commands_sent')
                 if 'task' in summary:result['task']=summary['task']
             except (OSError,ValueError) as exc:result['client_summary_read_error']=str(exc)
         with (output / "result.json").open("x") as stream: json.dump(result, stream, indent=2)
