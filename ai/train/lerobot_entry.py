@@ -37,6 +37,12 @@ def main():
         verify_processors(*processors)
         return processors
     lerobot_train.make_pre_post_processors = make_training_processors
+    weight=float(os.environ.get('INDY7_ACT_EXECUTION_PREFIX_WEIGHT','1'))
+    if weight!=1:
+        from ai.train.execution_prefix_loss import install
+        original_policy=lerobot_train.make_policy
+        def make_weighted_policy(*args,**kwargs):return install(original_policy(*args,**kwargs),weight)
+        lerobot_train.make_policy=make_weighted_policy
     lerobot_train.train()
 
 

@@ -24,10 +24,10 @@ from ai.train.checkpoint import check_files, verify_checkpoint, assert_policy_co
 NORMALIZATION = '{"VISUAL":"IDENTITY","STATE":"MEAN_STD","ACTION":"QUANTILE10"}'
 DEFAULTS = dict(seed=0, steps=100000, batch_size=64, num_workers=4, chunk_size=40, n_action_steps=10,
                 save_freq=20000, log_freq=50, learning_rate=.0001, device="cuda", use_amp=True,
-                ram_cache=False, dev_small=False, validation_fraction=.2, pilot_only=False)
+                ram_cache=False, dev_small=False, validation_fraction=.2, pilot_only=False, execution_prefix_weight=1.)
 # Device/workers/cache affect execution, not the trained architecture/optimizer.
 STRICT_RESUME = ("seed", "batch_size", "chunk_size", "n_action_steps", "learning_rate", "dev_small",
-                 "validation_fraction", "pilot_only", "use_amp", "save_freq", "log_freq")
+                 "validation_fraction", "pilot_only", "use_amp", "save_freq", "log_freq", "execution_prefix_weight")
 
 
 def copy_state_baseline(dataset):
@@ -58,6 +58,8 @@ def parse_args(argv=None):
     parser.add_argument("--device", default=None)
     for name in ("use_amp", "ram_cache", "dev_small", "pilot_only"):
         parser.add_argument("--" + name.replace("_", "-"), action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--init-checkpoint",type=Path,help="Weights-only initialization; new optimizer/scheduler, same verified dataset/architecture")
+    parser.add_argument("--execution-prefix-weight",type=float,default=None,help="Optional supervised loss weight on the existing n_action_steps prefix; default1")
     parser.add_argument("--dry-run", action="store_true", help="Validate and write plan, never start optimization")
     return parser.parse_args(argv)
 
@@ -67,9 +69,10 @@ def resolve_settings(args, previous=None):
     for key in DEFAULTS:
         explicit = getattr(args, key, None)
         if explicit is not None:
-            if previous and key in STRICT_RESUME and explicit != previous[key]:
+            if previous and key in STRICT_RESUME and explicit != previous.get(key,DEFAULTS[key]):
                 raise ValueError(f"Resume setting mismatch: {key}")
             settings[key] = explicit
+    if not math.isfinite(settings["execution_prefix_weight"]) or settings["execution_prefix_weight"]<1:raise ValueError("execution_prefix_weight must be finite >=1")
     for name in ("steps", "batch_size", "chunk_size", "n_action_steps", "save_freq", "log_freq"):
         if settings[name] < 1:
             raise ValueError(f"{name} must be positive")
@@ -100,6 +103,7 @@ def command(args, settings, split, training_root, resume_model=None):
         if settings["dev_small"]:
             cmd += ["--policy.dim_model", "64", "--policy.n_heads", "8", "--policy.dim_feedforward", "128",
                     "--policy.n_encoder_layers", "1", "--policy.n_vae_encoder_layers", "1"]
+    if not resume_model and getattr(args,"init_checkpoint",None):cmd += ["--policy.pretrained_path",str(check_files(args.init_checkpoint))]
     cmd += ["--dataset.repo_id", args.dataset_repo_id, "--dataset.root", str(Path(args.dataset_dir).resolve()),
             "--dataset.episodes", json.dumps(split["train"]), "--dataset.use_imagenet_stats", "false", "--dataset.video_backend", "pyav",
             "--policy.device", settings["device"], "--policy.use_amp", str(settings["use_amp"]).lower(),
@@ -111,6 +115,8 @@ def command(args, settings, split, training_root, resume_model=None):
 
 
 def resume_plan(path, dataset_fingerprint, args):
+    # Standalone act train --resume must register ACT before decoding its config.
+    from lerobot.policies.act.configuration_act import ACTConfig  # noqa: F401
     from lerobot.configs.policies import PreTrainedConfig
     from safetensors import safe_open
     model = check_files(path)
@@ -170,6 +176,7 @@ def resume_plan(path, dataset_fingerprint, args):
 
 def main(argv=None):
     args = parse_args() if argv is None else parse_args(argv)
+    if args.resume and args.init_checkpoint:raise ValueError("Choose resume or weights-only init, not both")
     report = validate_dataset(args.dataset_dir, repo_id=args.dataset_repo_id)
     print(format_report(report), flush=True)
     if not report["trainable"]:
@@ -186,6 +193,22 @@ def main(argv=None):
         settings = resolve_settings(args)
         split = split_episodes([ep["episode_index"] for ep in report["episode_manifest"]], settings["seed"],
                                settings["validation_fraction"], settings["pilot_only"])
+    if args.init_checkpoint:
+        source=check_files(args.init_checkpoint)
+        source_provenance=json.loads((source/'training_provenance.json').read_text())
+        config=json.loads((source/'config.json').read_text())
+        from lerobot.policies.act.configuration_act import ACTConfig  # noqa: F401
+        from lerobot.configs.policies import PreTrainedConfig
+        assert_policy_contract(PreTrainedConfig.from_pretrained(str(source)))
+        if (source_provenance['dataset_fingerprint']!=identity or
+                source_provenance['dataset_repo_id']!=args.dataset_repo_id):
+            raise ValueError('Initialization dataset differs')
+        if (settings['dev_small'] or config['dim_model']!=512 or
+                config['chunk_size']!=settings['chunk_size'] or
+                config['n_action_steps']!=settings['n_action_steps'] or
+                config['normalization_mapping']!=json.loads(NORMALIZATION) or
+                config['use_vae'] is not True):
+            raise ValueError('Weights-only init architecture mismatch')
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     output = Path(args.output_dir or f"outputs/act_{run_id}").expanduser().resolve()
     if output.exists() or output.is_relative_to(root) or root.is_relative_to(output):
@@ -193,6 +216,7 @@ def main(argv=None):
     output.mkdir(parents=True, exist_ok=False)
     manifest = {"run_id": run_id, "status": "planning", "dataset_root": str(root), "dataset_repo_id": args.dataset_repo_id,
                 "dataset_fingerprint": identity, "settings": settings, "split": split, "environment": environment(),
+                "initialized_from":str(check_files(args.init_checkpoint)) if args.init_checkpoint else None,
                 "resumed_from": str(resume_model) if resume_model else None, "resume_state": resumed,
                 "warnings": list(report["warnings"]), "robot_safety_verified": False}
     try:
@@ -232,7 +256,7 @@ def main(argv=None):
         env = dict(os.environ)
         env.update(PYTHONPATH=str(Path(__file__).resolve().parents[2]) + os.pathsep + env.get("PYTHONPATH", ""),
                    LEROBOT_RAM_CACHE="1" if settings["ram_cache"] else "0", LEROBOT_RAM_CACHE_WORKERS=str(settings["num_workers"]),
-                   INDY7_ACT_TRAIN_STATS=str(stats_root), HF_HUB_OFFLINE="1", HF_DATASETS_OFFLINE="1")
+                   INDY7_ACT_TRAIN_STATS=str(stats_root), INDY7_ACT_EXECUTION_PREFIX_WEIGHT=str(settings["execution_prefix_weight"]), HF_HUB_OFFLINE="1", HF_DATASETS_OFFLINE="1")
         with (output / "training.log").open("w", encoding="utf-8") as log:
             with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
                                   cwd=Path(__file__).resolve().parents[2]) as process:

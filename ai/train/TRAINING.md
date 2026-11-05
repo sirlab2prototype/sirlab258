@@ -240,3 +240,43 @@ HF 인증은 원격 자료가 필요한 경우에만 수행하고 토큰은 커�
 현재 원래 Dataset ID를 유지하고 출력 경로는 새로 지정한다. `--dry-run`도 검증·계획 파일을 쓴다.
 장비 설정·실제 카메라 실행은 [Teleop 가이드](../../docs/TELEOP.md),
 수집 운영은 [COLLECTION](../record/COLLECTION.md)을 따른다.
+
+## Weights-only initialization and execution-prefix diagnosis (2026-11-03)
+
+`--resume` deliberately preserves optimizer and scheduler state. Extending a run
+whose cosine horizon ended at step500 therefore keeps approximately LR1e-6;
+it does not create a fresh high-LR training schedule.
+
+For a separately recorded experiment on the **same verified Dataset**, use
+`--init-checkpoint PATH`: load ACT weights, start a new optimizer/scheduler, and
+write to a new output directory. It is mutually exclusive with `--resume`.
+The Dataset fingerprint and chunk/standard architecture must match. The parent
+is recorded as `initialized_from` in `run.json`/`result.json`; old weights remain
+unchanged. New steps count optimizer iterations in the new run, not cumulative
+iterations of the parent.
+
+`--execution-prefix-weight 4` optionally increases supervised L1 weight on the
+existing first `n_action_steps` targets, relative to the remaining horizon.
+The loss is normalized by valid weighted elements; padding contributes zero.
+The original KL term, 40 physical targets, target timestamps, normalization,
+ACT architecture and inference are unchanged. Default1 uses the original loss
+without installing the hook. Resume requires the same weight. This is an
+explicit training-objective experiment, not Action correction or a Guard bypass.
+The scheduler may execute later horizon indices after discarding expired heads;
+the weighting is a prefix emphasis, not an exact scheduler-slot mask.
+
+Reusable offline diagnostics (use new output paths):
+
+```bash
+PYTHONPATH=. .venv-act/bin/python -m ai.train.diagnose_fit \
+  --checkpoint "$CHECKPOINT" --dataset "$DATASET" \
+  --samples 1 --steps 800 --output outputs/temporary/fixed_fit_new
+PYTHONPATH=. .venv-act/bin/python -m ai.train.evaluate_samples \
+  --checkpoint "$CHECKPOINT" --dataset "$DATASET" \
+  --indices-from "$REFERENCE_PREDICTIONS_NPZ" --output outputs/temporary/eval_new
+```
+
+Fixed-batch weights are diagnostics only. Evaluation separates prediction-label,
+prediction-state and label-state errors, J1..J6 degrees and gripper command-state
+units, starts and horizons; it does not certify real execution. The final pilot
+report is `outputs/preserved/training_runs/act1_real10_executionfit_20261103_v1/FINAL_PIPELINE_REPORT.md`.
