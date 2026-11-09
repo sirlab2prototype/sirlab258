@@ -90,6 +90,7 @@ def snapshot(session, starter, node, *, phase=None, now_ns=None):
             "actual_sample_fps": session.timing_summary()["actual_sample_fps"] if active_take else None,
             "demonstration_type": session.demonstration_type,
             "home_capture": getattr(node,"home_contract",None) is not None,
+            "home_return_required": getattr(node,"require_home_complete",False),
             "home_phase": getattr(node,"last_home_phase",None),
             "correction": deepcopy(session.correction) if active_take else None,
             "pending": str(session.path) if session.path else None,

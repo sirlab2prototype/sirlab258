@@ -38,12 +38,15 @@ def test_RPC_timing_deadline_and_failure_never_retried(failed):
     assert row['status']==('TimeoutError' if failed else 'OK')
 
 
-def test_reviewed_operating_limits_retain_completed_estop_qualification():
+def test_expanded_operating_limits_require_new_review_without_losing_estop_qualification():
     from ai.execute.preflight import check
     from pathlib import Path
     root=Path(__file__).resolve().parents[3]
     out=check(root/'ai/execute/config/indy7_real_reviewed.json',root/'ai/execute/config/real_hardware_reviewed.json')
-    assert out['profile_valid'] and not out['errors']
+    assert not out['profile_valid']
+    assert any('reviewed_real_profiles_required' in error for error in out['errors'])
     assert out['estop_source']=='qualified_sdk'
     assert out['authority_mode']=='supervised_direct_link'
     assert out['hardware_connected'] is False and out['robot_commands_sent']==0
+    old=check(root/'ai/execute/config/indy7_real_5sec_20261105_backup.json',root/'ai/execute/config/real_hardware_reviewed.json')
+    assert old['profile_valid'] and not old['errors']

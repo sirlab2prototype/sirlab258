@@ -144,7 +144,9 @@ def test_home_endpoint_cannot_remain_complete_after_uncommanded_motion():
 def test_gui_marks_home_capture_without_declaring_task_success():
     from ai.record.test.test_gui_design import view_for
     from ai.record.gui_presentation import operator_fields
-    view=view_for("RECORDING");view.update(home_capture=True,home_phase="HOME_COMPLETE")
+    view=view_for("RECORDING");view.update(home_capture=True,home_phase="HOME_COMPLETE",home_return_required=True)
     fields=operator_fields(view)
     assert "Home 포함" in fields["mode"]
     assert "실제 작업 결과" in fields["default_notice"]
+    view["home_return_required"] = False
+    assert "녹화를 종료" not in operator_fields(view)["default_notice"]

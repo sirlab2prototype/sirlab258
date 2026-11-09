@@ -1,0 +1,80 @@
+{
+  "profile": "indy7_manufacturer_margin_1deg_candidate",
+  "reviewed_for_real": false,
+  "review_record": "Candidate joint ranges only. Not reviewed or approved for real execution.",
+  "joint_min_rad": [
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.735004599267865
+  ],
+  "joint_max_rad": [
+    3.036872898470133,
+    3.036872898470133,
+    3.036872898470133,
+    3.036872898470133,
+    3.036872898470133,
+    3.735004599267865
+  ],
+  "max_target_error_rad": [
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945
+  ],
+  "max_step_rad": [
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945
+  ],
+  "max_velocity_rad_s": [
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483
+  ],
+  "max_acceleration_rad_s2": [
+    4,
+    3,
+    4,
+    5,
+    3,
+    5
+  ],
+  "tracking_error_rad": [
+    0.05,
+    0.05,
+    0.05,
+    0.08,
+    0.05,
+    0.08
+  ],
+  "tracking_timeout_ms": 150,
+  "joint_stale_ms": 100,
+  "status_stale_ms": 100,
+  "observation_stale_ms": 150,
+  "max_action_lateness_ms": 20,
+  "command_timeout_ms": 50,
+  "mode_timeout_ms": 5000,
+  "stop_timeout_ms": 1000,
+  "scheduler_watchdog_ms": 100,
+  "inference_watchdog_ms": 750,
+  "first_action_timeout_ms": 1500,
+  "stopped_velocity_rad_s": 0.01,
+  "gripper_open_threshold": 0.35,
+  "gripper_grasp_threshold": 0.65,
+  "gripper_output_min": -0.25,
+  "gripper_output_max": 1.25,
+  "gripper_dwell_ms": 100,
+  "gripper_min_interval_ms": 200,
+  "gripper_timeout_ms": 1000
+}

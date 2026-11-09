@@ -226,6 +226,21 @@ def test_full_return_option_requires_home_endpoint_at_stop(recorder, tmp_path, r
         assert h.session.integrity["violations"][-1]["reason"] == "required_home_endpoint_missing"
 
 
+def test_forward_stop_keeps_home_contract_without_requiring_return(recorder, tmp_path):
+    def remain_in_qp(value, _ms):
+        value["phase"], value["home_generation"] = "QP_TELEOP", 0
+
+    h = harness(recorder, tmp_path, require_home=False, mutate=remain_in_qp)
+    for ms in range(50, 351, 50):
+        h.tick(ms)
+    h.session.finish_aligned(h.history.snapshot(MONO + 410 * MS), h.timing(410))
+    assert h.session.integrity["valid"]
+    assert h.session.metadata["home_action_acceptance"] == "simulated_fixture_only"
+    assert h.session.metadata["home_return_required"] is False
+    assert h.session.metadata["action_context_stop"]["phase"] == "QP_TELEOP"
+    assert "저장 완료" in h.session.save("success", tmp_path / "success")
+
+
 def test_omitted_context_cannot_bypass_required_home():
     guard = ActionContextGuard(EPOCH, require_home_complete=True)
     with pytest.raises(HomeActionError, match="missing_action_context"):

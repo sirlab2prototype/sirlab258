@@ -27,7 +27,9 @@ ACT 모터 실행과 qdes 궤적의 Teleop 재생은 여전히 미검증이며 R
    직접 Python 실행은 먼저 `source scripts/activate_act.sh`로 같은 환경을 사용한다.
 3. 실제 성공한 Open/Grasp 명령 상태가 수신돼야 한다. 초기 gripper 값을 추정하지 않는다.
 4. Home에서 s → QP 작업 → 물체 내려놓기/개방/충분한 후퇴 → 운영자의 View+Y Home.
-5. GUI **Home 도착 확인** 이후 r. 실제 작업 성공을 작업자가 확인하고 o로 저장한다.
+5. 작업의 녹화 종료 자세에서 r. Home 복귀를 녹화했다면 GUI **Home 도착 확인** 이후 r이다.
+   실제 작업 성공을 작업자가 확인하고 o로 저장한다. Home 복귀를 녹화 끝의 필수 조건으로
+   요구할 때만 터미널에서 `--require-home-complete`를 명시한다.
    Correction은 기존 x 마커를 사용한다. Home 도착만으로 작업 성공을 자동 저장하지 않는다.
 6. 첫 실수집은 격리된 기술 Pilot에서 영상·7D·Timing Sidecar·Validator를 확인한다.
    qdes 실측 성공과 실제7D/RGB 이동 Episode의 저장 성공은 별개다.

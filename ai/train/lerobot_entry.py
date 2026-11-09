@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from lerobot.scripts import lerobot_train
 import os
+import hashlib
+import json
+from pathlib import Path
 
 from ai import dataset_contract as contract
 
@@ -38,10 +41,28 @@ def main():
         return processors
     lerobot_train.make_pre_post_processors = make_training_processors
     weight=float(os.environ.get('INDY7_ACT_EXECUTION_PREFIX_WEIGHT','1'))
-    if weight!=1:
-        from ai.train.execution_prefix_loss import install
+    balance=os.environ.get('INDY7_ACT_JOINT_PHYSICAL_BALANCE','0')=='1'
+    if weight!=1 or balance:
+        from ai.train.execution_prefix_loss import install,physical_joint_weights
         original_policy=lerobot_train.make_policy
-        def make_weighted_policy(*args,**kwargs):return install(original_policy(*args,**kwargs),weight)
+        def make_weighted_policy(*args,**kwargs):
+            policy=original_policy(*args,**kwargs)
+            dimensions=None
+            if balance:
+                from lerobot.configs.types import NormalizationMode
+                if policy.config.normalization_mapping.get('ACTION')!=NormalizationMode.QUANTILE10:
+                    raise ValueError('Physical joint weighting requires ACTION QUANTILE10')
+                stats=json.loads((Path(stats_root)/'stats.json').read_text())['action']
+                dimensions=physical_joint_weights(stats['q10'],stats['q90'])
+                digest=hashlib.sha256()
+                count=0
+                for key,tensor in policy.named_parameters():
+                    digest.update(key.encode())
+                    digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
+                    count+=tensor.numel()
+                print('JOINT_PHYSICAL_BALANCE '+json.dumps({'weights':dimensions.tolist(),
+                    'initial_sha256_named_parameters':digest.hexdigest(),'parameter_count':count}),flush=True)
+            return install(policy,weight,dimensions)
         lerobot_train.make_policy=make_weighted_policy
     lerobot_train.train()
 

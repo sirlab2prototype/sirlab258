@@ -58,7 +58,7 @@ def main(argv=None):
             trial=argparse.ArgumentParser(add_help=False)
             trial.add_argument('--duration',type=float,default=5.)
             limit,remaining=trial.parse_known_args(forwarded)
-            if not 0<limit.duration<=5:parser.error('Supervised direct-link trial is limited to 0 < duration <= 5 seconds')
+            if not 0<limit.duration<=15:parser.error('Supervised direct-link trial is limited to 0 < duration <= 15 seconds')
             forwarded=[*remaining,'--duration',str(limit.duration)]
         return inference_main(["--checkpoint",args.checkpoint,"--source","ros","--dry-run",*forwarded],
             _real_options={"config":args.config.resolve(),"hardware":args.hardware_profile.resolve(),

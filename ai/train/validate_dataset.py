@@ -146,7 +146,14 @@ class _Validator:
             actual = features.get(key, {})
             self.check(actual.get("dtype") == expected["dtype"] and tuple(actual.get("shape", ())) == expected["shape"]
                        and actual.get("names") == expected["names"], "sidecar", f"Episode {index}: feature mismatch {key}")
-        self.check(meta.get("outcome") == "success", "outcome", f"Episode {index}: success not confirmed")
+        derivation = meta.get("derived_from")
+        derived_forward = (meta.get("outcome") == "derived_forward_approach"
+                           and isinstance(derivation, dict)
+                           and derivation.get("source_outcome") == "success"
+                           and derivation.get("derived_outcome") == "forward_approach_only"
+                           and derivation.get("end_frame_exclusive") == derivation.get("first_grasp_frame")
+                           and meta.get("home_return_required") is False)
+        self.check(meta.get("outcome") == "success" or derived_forward, "outcome", f"Episode {index}: success or documented forward derivation not confirmed")
         self.success += meta.get("outcome") == "success"
         integrity = meta.get("integrity", {})
         valid = integrity.get("valid") is True and integrity.get("violations") == []

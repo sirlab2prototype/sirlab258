@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "dataset_id": "act2_010_001",
+  "robot": "indy7",
+  "policy": "act",
+  "action": {
+    "id": "act2",
+    "description": "Forward only: Capstone Home to fixed center basket approach; Mark7 stays Open"
+  },
+  "plan": {
+    "version": 1,
+    "id": "forward_fixed_center10_20261106_v1",
+    "description": "동일 중앙 바구니 위치와 동일 접근 경로로 Home에서 접근 자세까지 10회. 파지·운반·Home 복귀는 녹화하지 않는다. 실제 전진 성공만 저장한다.",
+    "kind": "custom",
+    "conditions": [
+      {"condition_id": 1, "collection_order": 1, "description": "전진 시연 1/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 2, "collection_order": 2, "description": "전진 시연 2/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 3, "collection_order": 3, "description": "전진 시연 3/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 4, "collection_order": 4, "description": "전진 시연 4/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 5, "collection_order": 5, "description": "전진 시연 5/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 6, "collection_order": 6, "description": "전진 시연 6/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 7, "collection_order": 7, "description": "전진 시연 7/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 8, "collection_order": 8, "description": "전진 시연 8/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 9, "collection_order": 9, "description": "전진 시연 9/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}},
+      {"condition_id": 10, "collection_order": 10, "description": "전진 시연 10/10: 중앙 고정 위치, 동일 직접 접근, Gripper Open, 접근 자세에서 녹화 종료", "fields": {"recording_scope": "forward_approach_only", "basket_placement": "fixed_center", "approach_path": "same_direct_path", "gripper_command": "open"}}
+    ]
+  }
+}

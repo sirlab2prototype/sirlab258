@@ -1,0 +1,80 @@
+{
+  "profile": "indy7_5s_operator_review_pending",
+  "reviewed_for_real": true,
+  "review_record": "Research-team operating approval in conversation 2026-11-04 12:30 UTC; J6 operating range correction explicitly approved later on 2026-11-04 to actual Capstone Home 90.507 deg +/-2 deg (88.507..92.507 deg). Limited supervised first ACT link trial, at most 2 s. Values and residual risks: ai/execute/SAFETY_APPROVAL_PROPOSAL.md. Not collision certification; live checks and separate motor approval required.",
+  "joint_min_rad": [
+    -0.03490658503988659,
+    0.6632251157578453,
+    -2.303834612632515,
+    1.53588974175501,
+    -0.03490658503988659,
+    1.5447385610626214
+  ],
+  "joint_max_rad": [
+    0.03490658503988659,
+    0.7330382858376184,
+    -2.234021442552742,
+    1.6057029118347832,
+    0.03490658503988659,
+    1.6145517311423945
+  ],
+  "max_target_error_rad": [
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945
+  ],
+  "max_step_rad": [
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945,
+    0.026179938779914945
+  ],
+  "max_velocity_rad_s": [
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483,
+    0.7853981633974483
+  ],
+  "max_acceleration_rad_s2": [
+    4,
+    3,
+    4,
+    5,
+    3,
+    5
+  ],
+  "tracking_error_rad": [
+    0.05,
+    0.05,
+    0.05,
+    0.08,
+    0.05,
+    0.08
+  ],
+  "tracking_timeout_ms": 150,
+  "joint_stale_ms": 100,
+  "status_stale_ms": 100,
+  "observation_stale_ms": 150,
+  "max_action_lateness_ms": 20,
+  "command_timeout_ms": 50,
+  "mode_timeout_ms": 5000,
+  "stop_timeout_ms": 1000,
+  "scheduler_watchdog_ms": 100,
+  "inference_watchdog_ms": 750,
+  "first_action_timeout_ms": 1500,
+  "stopped_velocity_rad_s": 0.01,
+  "gripper_open_threshold": 0.35,
+  "gripper_grasp_threshold": 0.65,
+  "gripper_output_min": -0.25,
+  "gripper_output_max": 1.25,
+  "gripper_dwell_ms": 100,
+  "gripper_min_interval_ms": 200,
+  "gripper_timeout_ms": 1000
+}

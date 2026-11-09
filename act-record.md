@@ -139,8 +139,11 @@ GUI의 주요 버튼은 **목록 새로고침**, **선택한 데이터셋 열기
 정상 저장만 조건 완료에 포함한다. Correction은 별도 보존하며 같은 조건의 다음 Attempt로 이어진다.
 실물 작업 완료 여부는 작업자가 판단한다. 기존 무결성 검사를 통과하지 못한 자료는 저장할 수 없다.
 현재 `act record`는 검증된 장비별 Home 프로필을 불러오며 GUI에 **Home 포함**을 표시한다.
-작업 후 충분히 후퇴하고 기존 View+Y Home → **Home 도착 확인** → r → 실제 성공 확인 후 o다.
-그리퍼 성공 명령 상태와 fresh context가 필요하다. Home 없는 기존 터미널 수집은
+Home qdes 관측·검사는 유지되지만 녹화 끝의 Home 복귀는 기본 필수 조건이 아니다.
+현재 Collection 작업의 종료 자세에서 r을 누르고 실제 성공 확인 후 o로 저장한다.
+전진 전용 수집에서는 Home → 바구니 접근만 녹화하고 Home 복귀는 저장 후 수행한다.
+Home 복귀까지 녹화해야 하는 터미널 작업은 `--require-home-complete`를 명시한다.
+그리퍼 성공 명령 상태와 fresh context가 필요하다. Home qdes source가 필요 없는 기존 터미널 수집은
 `act record --collection-dir <경로> --no-home-capture`로 실행하고 Home 전에 r로 끝낸다.
 Home 수집의 실측 범위와 추론 제한은 [Home 수집](docs/ACT_HOME_RECORDING.md)을 따른다.
 
@@ -200,3 +203,29 @@ python -m ai.record.gui --collection-dir outputs/act_gui_integration_test
 - 임의 좌표·자동 배치·목표를 생성하지 않는다. 검증된 범위에서 작업하고 실제 작업 완료 후 저장한다.
 
 로봇 제어, 다른 로봇·정책, 다중 데이터셋 학습, Correction 학습, Collection 마이그레이션은 이 기능에 포함하지 않는다.
+
+## 10. 전진 전용 고정 중앙 10개 Collection
+
+`ai/record/plans/act2_010_001.json`은 별도 행동·10조건 정의다. 저장 경로는
+`outputs/preserved/datasets/act2_010_001/`이고 기존 `act1_108_001`과 병합되지 않는다.
+실물 장비 스택은 승인된 기존 절차로 준비한 뒤 `act record`의 선택 화면에서
+`act2_010_001`을 열거나, 터미널에서 아래처럼 직접 연다.
+
+```bash
+act record --collection-dir outputs/preserved/datasets/act2_010_001
+```
+
+각 시도는 기존 Capstone Home과 Mark7 Open을 확인하고 고정 중앙 바구니에 대해
+`s` → 즉시 기존 Teleoperation으로 동일 경로 접근 → 접근 종료 자세에서 `r` →
+실제 전진 작업 성공을 확인한 경우에만 `o`다. 그 뒤 녹화 밖에서 Home으로 복귀해
+다음 `s`를 사용한다. 파지·Close·운반·Home 복귀를 녹화하지 않는다.
+실패/무결성 오류는 SUCCESS로 저장하지 말고 기존 `d`/복구 절차를 따른다.
+
+```bash
+.venv-act/bin/python -m ai.record.collection status --collection-dir outputs/preserved/datasets/act2_010_001
+.venv-act/bin/python -m ai.record.validate_forward_collection --collection-dir outputs/preserved/datasets/act2_010_001
+```
+
+첫 명령은 장부의 완료 수와 다음 조건을, 둘째는 기존 전체 Dataset Validator와
+전진 구간의 Open·실측 이동·첫 지속 Action 이동·녹화 내 Home 부재를 읽기 전용으로
+대조한다. 실제 바구니 위치·접근 경로·작업 성공은 작업자가 확인한다.

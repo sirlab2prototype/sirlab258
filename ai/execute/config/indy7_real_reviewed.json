@@ -1,22 +1,22 @@
 {
-  "profile": "indy7_5s_operator_review_pending",
+  "profile": "indy7_capstone_joint_margin_1deg_pending_review",
   "reviewed_for_real": true,
-  "review_record": "Research-team operating approval in conversation 2026-11-04 12:30 UTC; J6 operating range correction explicitly approved later on 2026-11-04 to actual Capstone Home 90.507 deg +/-2 deg (88.507..92.507 deg). Limited supervised first ACT link trial, at most 2 s. Values and residual risks: ai/execute/SAFETY_APPROVAL_PROPOSAL.md. Not collision certification; live checks and separate motor approval required.",
+  "review_record": "2026-11-09 internal operator authorization. The onsite operator explicitly accepts responsibility for a supervised ACT real-hardware trial using the current expanded joint operating limits. Prior 2026-11-05 closed-loop trial evidence is retained. Expanded workspace collision safety has not been independently certified. Existing first-action, velocity, acceleration, tracking, watchdog and E-stop safeguards remain required. Live workspace, robot state and emergency-stop checks are mandatory before execution.",
   "joint_min_rad": [
-    -0.03490658503988659,
-    0.6632251157578453,
-    -2.303834612632515,
-    1.53588974175501,
-    -0.03490658503988659,
-    1.5447385610626214
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.036872898470133,
+    -3.735004599267865
   ],
   "joint_max_rad": [
-    0.03490658503988659,
-    0.7330382858376184,
-    -2.234021442552742,
-    1.6057029118347832,
-    0.03490658503988659,
-    1.6145517311423945
+    3.036872898470133,
+    3.036872898470133,
+    3.036872898470133,
+    3.036872898470133,
+    3.036872898470133,
+    3.735004599267865
   ],
   "max_target_error_rad": [
     0.026179938779914945,
@@ -27,12 +27,12 @@
     0.026179938779914945
   ],
   "max_step_rad": [
-    0.026179938779914945,
-    0.026179938779914945,
-    0.026179938779914945,
-    0.026179938779914945,
-    0.026179938779914945,
-    0.026179938779914945
+    0.039269908169872414,
+    0.039269908169872414,
+    0.039269908169872414,
+    0.039269908169872414,
+    0.039269908169872414,
+    0.039269908169872414
   ],
   "max_velocity_rad_s": [
     0.7853981633974483,

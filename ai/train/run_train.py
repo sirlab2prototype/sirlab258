@@ -24,10 +24,12 @@ from ai.train.checkpoint import check_files, verify_checkpoint, assert_policy_co
 NORMALIZATION = '{"VISUAL":"IDENTITY","STATE":"MEAN_STD","ACTION":"QUANTILE10"}'
 DEFAULTS = dict(seed=0, steps=100000, batch_size=64, num_workers=4, chunk_size=40, n_action_steps=10,
                 save_freq=20000, log_freq=50, learning_rate=.0001, device="cuda", use_amp=True,
-                ram_cache=False, dev_small=False, validation_fraction=.2, pilot_only=False, execution_prefix_weight=1.)
+                ram_cache=False, dev_small=False, validation_fraction=.2, pilot_only=False, execution_prefix_weight=1.,
+                joint_physical_balance=False)
 # Device/workers/cache affect execution, not the trained architecture/optimizer.
 STRICT_RESUME = ("seed", "batch_size", "chunk_size", "n_action_steps", "learning_rate", "dev_small",
-                 "validation_fraction", "pilot_only", "use_amp", "save_freq", "log_freq", "execution_prefix_weight")
+                 "validation_fraction", "pilot_only", "use_amp", "save_freq", "log_freq", "execution_prefix_weight",
+                 "joint_physical_balance")
 
 
 def copy_state_baseline(dataset):
@@ -56,7 +58,7 @@ def parse_args(argv=None):
     parser.add_argument("--learning-rate", "--lr", type=float, default=None)
     parser.add_argument("--validation-fraction", type=float, default=None)
     parser.add_argument("--device", default=None)
-    for name in ("use_amp", "ram_cache", "dev_small", "pilot_only"):
+    for name in ("use_amp", "ram_cache", "dev_small", "pilot_only", "joint_physical_balance"):
         parser.add_argument("--" + name.replace("_", "-"), action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--init-checkpoint",type=Path,help="Weights-only initialization; new optimizer/scheduler, same verified dataset/architecture")
     parser.add_argument("--execution-prefix-weight",type=float,default=None,help="Optional supervised loss weight on the existing n_action_steps prefix; default1")
@@ -256,7 +258,9 @@ def main(argv=None):
         env = dict(os.environ)
         env.update(PYTHONPATH=str(Path(__file__).resolve().parents[2]) + os.pathsep + env.get("PYTHONPATH", ""),
                    LEROBOT_RAM_CACHE="1" if settings["ram_cache"] else "0", LEROBOT_RAM_CACHE_WORKERS=str(settings["num_workers"]),
-                   INDY7_ACT_TRAIN_STATS=str(stats_root), INDY7_ACT_EXECUTION_PREFIX_WEIGHT=str(settings["execution_prefix_weight"]), HF_HUB_OFFLINE="1", HF_DATASETS_OFFLINE="1")
+                   INDY7_ACT_TRAIN_STATS=str(stats_root), INDY7_ACT_EXECUTION_PREFIX_WEIGHT=str(settings["execution_prefix_weight"]),
+                   INDY7_ACT_JOINT_PHYSICAL_BALANCE="1" if settings["joint_physical_balance"] else "0",
+                   HF_HUB_OFFLINE="1", HF_DATASETS_OFFLINE="1")
         with (output / "training.log").open("w", encoding="utf-8") as log:
             with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
                                   cwd=Path(__file__).resolve().parents[2]) as process:

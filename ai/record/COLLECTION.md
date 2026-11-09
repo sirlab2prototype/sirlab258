@@ -109,9 +109,11 @@ notes도 입력할 수 있다. 카메라에서 좌표를 추정하지 않는다.
 s에서 배치를 동결한다. 시작 검증 실패 시 PREPARED Attempt를 유지하고 s 재시도는 같은
 번호를 사용한다. 배치를 바꾸려면 d로 준비 시도를 폐기한 뒤 새 Attempt를 시작한다.
 
-활성 장비별 Home 프로필을 사용하는 `act record`는 Home 도착 확인 후 r로 종료한다.
-기존 QP context와 읽기 전용 recording_context를 검증하며 Home 누락/실패/조기 종료는
-INVALID로 차단한다. 상세는 [Home 수집](../../docs/ACT_HOME_RECORDING.md)을 따른다.
+활성 장비별 Home 프로필을 사용하는 `act record`도 작업 종료 자세에서 r로 종료할 수 있다.
+기존 QP context와 읽기 전용 recording_context, 녹화 중 Home 명령·도착은 계속 검증한다.
+녹화 중 Home을 시작했다면 완료 전 종료는 INVALID로 차단한다. 종료 시 Home 완료를
+필수로 하는 터미널 수집은 `--require-home-complete`를 명시한다.
+상세는 [Home 수집](../../docs/ACT_HOME_RECORDING.md)을 따른다.
 기존 Collection/계획은 변환하지 않는다. Home 없는 종전 터미널 수집은
 `--no-home-capture`로 실행하고 Home 전에 r로 끝낸다.
 

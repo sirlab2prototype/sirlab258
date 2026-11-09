@@ -880,10 +880,10 @@ def main(argv=None, *, frontend=None) -> int:
     parser.add_argument("--no-home-capture",action="store_true",help="use the original QP-only recording source")
     parser.add_argument("--action-topic", default="/capstone/teleop_action")
     parser.add_argument("--require-home-complete", action="store_true",
-                        help="require a verified Home endpoint before saving; automatic with a measured Home profile")
+                        help="require a verified Home endpoint before saving (optional, including with a measured Home profile)")
     parser.add_argument("--gripper-topic", default="/capstone/gripper_state")
     parser.add_argument("--resume", action="store_true", help="append to an existing compatible dataset")
-    parser.add_argument("--collection-dir", type=Path, help="enable fixed-plan formal Core-108 collection in this directory")
+    parser.add_argument("--collection-dir", type=Path, help="open an existing formal Collection in this directory")
     for name, default in asdict(SyncOptions()).items():
         parser.add_argument("--" + name.replace("_", "-"), type=int if name == "history_size" else float,
                             default=default)
@@ -970,7 +970,7 @@ def main(argv=None, *, frontend=None) -> int:
             **({"context_topic":LIVE_CONTEXT_TOPIC} if home_contract else {}),
         )
         node.home_contract = home_contract
-        node.require_home_complete = args.require_home_complete or home_contract is not None
+        node.require_home_complete = args.require_home_complete
     except BaseException:
         try:
             if rclpy.ok():

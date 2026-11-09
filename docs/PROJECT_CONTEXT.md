@@ -1,5 +1,13 @@
 # sirlab258 — 현재 상태와 다음 작업
 
+2026-11-05 ACT SafetyGuard 캡스톤 후보: `ai/execute/config/indy7_real_reviewed.json`의
+관절 범위를 J1~5 ±174°·J6 ±214°로, 20Hz 명령 Step을 1.5°에서 2.25°로 조정했다.
+성공 시연10개/8997프레임의 Action·실측 관절 통계와 기존 45°/s 속도 상한에 근거한
+오프라인 후보이며 `reviewed_for_real=false`다. Home/목표-실측 오차/속도/가속도/
+tracking/Stop·Watchdog는 유지했다. 이전 Home ±2° 5초 실물 시험 설정은
+`ai/execute/config/indy7_real_5sec_20261105_backup.json`에 그대로 보존했다.
+새 전 범위의 작업 공간·충돌·실물 추종은 승인 또는 검증되지 않았다.
+
 2026-11-05 최종 ACT 실물 Closed-loop 5초 시험:
 `outputs/temporary/inference/act_real_test_5sec_20261105T102020`의 result/summary가
 `complete`/`duration_complete`, 생성·수락 Chunk 각10개, SDK 시도·ACK 각96회,
@@ -176,7 +184,8 @@ age로 stale 판정하는 코드 경쟁을 확인·수정했다. 당시 실패 �
   오류/75ms 초과 간격0. degree 목표·미분 대응을 장비별 근거로 기록했다.
 - `ai/record/config/home_capture.json`을 활성화했다. `act record`가 읽기 전용 독립 source를
   시작하고 `/capstone/recording_context`의 measured q와 Home qdes를 기존20FPS/7D에 정렬한다.
-  QP 명령/기존 movej/재ARM/Driver는 유지한다. Home 완료 후 r, 실제 성공 확인 후 o다.
+  QP 명령/기존 movej/재ARM/Driver는 유지한다. 당시에는 Home 완료 후 r을 요구했으며,
+  2026-11-06부터 종료 Home 요구는 명시 옵션으로만 적용한다. 실제 작업 성공 확인 후 o다.
   Home 없는 기존 터미널 수집은 `--no-home-capture`로 Home 전에 r를 사용한다.
 - 프로필은 collection_only이며 원문 SHA/신원/버전 결합이다. 원문은
   `outputs/preserved/validation/home_qdes_20261102_0rx_dvsw/`에 보존했다.
@@ -257,8 +266,8 @@ Validator → ACT 학습/Checkpoint → Synthetic 또는 승인된 ROS 관측 Dr
 - 목표는 L/C/R × A1..A6 × 여섯 Depth의 정상 성공108개다. 원본 ID와 Shuffle은 유지한다.
 - 조건표는 `docs/ACT_108_Episode_Execution_Log_Template.md`를 코드가 직접 읽는다. 이동·수정 금지.
 - `ready`는 제거됐다. s에서 조건·Attempt·선택적 좌표를 확정하고 60ms 시작 검사 후 기록한다.
-- 미측정 좌표는 null이다. 활성 Home 프로필 사용 시 Home 완료 후 r로 끝낸다.
-  `--no-home-capture`는 Home 전에 r이며 미검증 Home 녹화는 차단한다.
+- 미측정 좌표는 null이다. 활성 Home 프로필에서도 작업 종료 자세에서 r로 끝낼 수 있다.
+  `--require-home-complete`는 종료 Home 완료를 추가로 요구한다. 미검증 Home 녹화는 차단한다.
 - `datasets/indy7_act_core108/{success,correction,failure,pending}`와 `collection.json`, `receipts/`를 함께 보존한다.
 - 정상만 Core 완료에 포함한다. Correction은 미완료를 유지하고 동일 조건의 다음 Attempt를 안내한다.
 - 신규 Failure 저장은 없으며 과거 Failure 이력은 읽는다. INVALID 저장 차단·Pending·reconcile을 유지한다.
@@ -686,3 +695,28 @@ INPUTS_READY/NOT_READY를 표시했다. 실물에서 일시적인 `fresh_advanci
 Mark7 포트 점유 확인은 유지하며 외부 프로세스를 종료하지 않는다. 당시 Fake 검증
 근거는 `tmp/act_prepare_tfre4kj5/tests.xml`과 관련 이력에 보존돼 있다.
 현행 사용법은 [Real Inference 절차](../ai/execute/REAL_INFERENCE.md)를 따른다.
+
+## 전진 구간 전용 ACT C 실험 (2026-11-06)
+
+기존 성공10개 Snapshot에서 최초 지속 이동 0.25°보다 6프레임 앞을 시작으로,
+첫 Grasp 명령 상태 전환 프레임을 배타적 끝으로 하는 별도 파생 Dataset을 만들었다.
+10 Episode/2,267프레임이며 두 RGB와 관절·Action은 원본에서 같은 프레임을 선택했다.
+Action 값은 비트 단위로 같고 영상은 재인코딩된다. 파생 Episode outcome은
+`derived_forward_approach`로 표시하며 전체 작업 성공으로 세지 않는다. 학습·평가
+결과와 상세 절단 근거는 `outputs/temporary/inference/act_forward_c_20261106_v1/`
+및 별도 학습 run을 따른다. C 신규 8,000-step 학습은 A/B와 같은 seed·초기 가중치·
+batch8·분할·optimizer/LR·실행 prefix 가중치4에서 완료됐다. 동일 원본 관측의 첫 실제
+소비 index2 방향은 C 3/10(홀드아웃 0/2), 다음 index6은9/10이나 거리1.5° 제한은
+각각1/10·0/10이다. 홀드아웃 이동 구간 MAE도 A/B보다 크다. 전진 전용 학습만으로
+안정적인 초기 출발을 확인하지 못했다. 실물·Scheduler·SafetyGuard·원본은 변경하지 않았다.
+
+## 전진 전용 실수집 Collection 준비 (2026-11-06)
+
+새 `act2_010_001` 정의와 10조건 Collection 장부를 별도 생성했다. 현재 SUCCESS 0/10,
+다음 조건1·다음 Episode0이다. 기존 파일 스키마는 `act<행동>_<조건수>_<일련번호>`라
+제안된 자유형 ID는 사용하지 않았다. Home 프로필/qdes 검증은 유지하고 종료 시
+`HOME_COMPLETE` 요구만 기본값에서 제거했다. 녹화 중 시작한 Home은 완료 전 종료를
+계속 차단하며 `--require-home-complete` 명시 시 이전 종료 요구를 적용한다.
+전진 수집 후 읽기 전용 `ai.record.validate_forward_collection`과 기존 Dataset
+Validator로 20FPS/두 RGB·관절·Action·시각·Open·실측 전진·녹화 내 Home 없음 여부를
+대조한다. Fake Recorder/Collection 집중97개 통과; 실제 장비 연결·녹화·학습은 없었다.

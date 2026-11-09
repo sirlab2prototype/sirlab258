@@ -135,10 +135,11 @@ def operator_fields(view):
     if view.get("custom_plan") and state == "READY" and (not stats or stats["success"] != total):
         notice = "계획 조건에 맞게 준비 후 녹화를 시작하세요."
     if view.get("home_capture"):
-        if state=="READY":notice += " Home 복귀까지 녹화한 뒤 종료하세요."
+        if state=="READY" and view.get("home_return_required"):
+            notice += " Home 복귀까지 녹화한 뒤 종료하세요."
         if state=="RECORDING" and view.get("home_phase") in ("HOME_REQUESTED","HOME_MOVING","HOME_SETTLING"):
             notice="Home 복귀 구간을 녹화하고 있습니다."
-        if state=="RECORDING" and view.get("home_phase")=="HOME_COMPLETE":
+        if state=="RECORDING" and view.get("home_phase")=="HOME_COMPLETE" and view.get("home_return_required"):
             notice="Home 도착을 확인했습니다. 녹화를 종료하고 실제 작업 결과를 확인하세요."
     return {"progress": progress, "state": name, "state_color": color,
             "elapsed": recording_clock(view.get("elapsed_s", 0)), "mode": mode,

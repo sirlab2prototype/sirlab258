@@ -1,5 +1,26 @@
 # Indy7 감독형 5초 ACT Real Inference
 
+2026-11-05 이후 `config/indy7_real_reviewed.json`은 캡스톤 확대 범위의 **미승인
+오프라인 후보**다(`reviewed_for_real=false`). J1~5 ±174°·J6 ±214°와
+`max_step_rad=2.25°`는 이전 실물 시험 승인 범위가 아니다. 해당 시험 설정의 원문은
+`config/indy7_real_5sec_20261105_backup.json`에 보존했다. 아래 5초 실행 기록은
+백업 설정의 과거 결과이며 새 후보의 실물 검증이 아니다. 이전 Home 자세와
+목표 오차·속도·가속도·tracking·정지 제한은 새 후보에서도 유지된다.
+
+캡스톤 후보의 오프라인 근거는 학습 Snapshot manifest의 SUCCESS10/8997프레임이다.
+Episode 경계를 제외한8987개 차분에서 관절별 Action 변화 최대는
+J1~6 `[2.507,2.976,4.444,2.719,2.776,2.599]°/50ms`, 실측 위치 차분에서
+계산한 속도 최대는 `[24.513,29.391,44.320,36.569,33.376,34.297]°/s`였다.
+QP 구간의 Action은 QP30Hz의 사후 SDK 목표를 Recorder20Hz로 표본화한 값이며
+실측 속도가 아니다. 이전1.5° Step은 명목20Hz에서30°/s였으므로 기존45°/s 상한에 맞춰
+2.25°로 조정했다. 원본 최대4.444°를 복사하지 않았다. 새 Step에서도
+J1~6 `[2,41,151,28,45,12]`개 차분이2.25°를 넘고, 기존 목표-실측
+1.5° 상한 초과 프레임은 `[1369,1615,2046,622,1658,743]`개다.
+기존 Home ±2° 범위 밖 Action은8405/8997프레임, 새 제조사-1° 범위 밖은0개다.
+기존 목표 오차·tracking·가속도 값은 QP 표본만으로 ACT 실물 추종 허용치로
+재승인할 수 없어 유지했다. `SafetyGuard.bounded_target()`도 원본 목표 범위와
+목표-현재 오차를 보정 전에 검사하므로 새 범위만으로 시연 재생이 보장되지 않는다.
+
 2026-11-05 최종 5초 실물 Closed-loop 시험은
 `outputs/temporary/inference/act_real_test_5sec_20261105T102020`의 `result.json`과
 `client/summary.json`에서 `complete`/`duration_complete`로 끝났다. ACT Chunk 10개,

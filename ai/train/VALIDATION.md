@@ -51,6 +51,12 @@ Training is blocked by missing/malformed files, incompatible features/order or
 physical vector dtype, inconsistent episode/frame indices, invalid values,
 nonbinary gripper, nominal/PTS gaps, missing sidecars, unconfirmed success or
 integrity, nonzero missed deadlines/skips, and inconsistent stored statistics.
+For the isolated forward-only ACT experiment, an Episode with
+`outcome=derived_forward_approach` is accepted only with a `derived_from` record
+that identifies a successful source, the first Grasp as its exclusive end, and
+`home_return_required=false`. It is counted as **zero successful full-task
+Episodes** in the report. This permits training the shorter task without
+misrepresenting its outcome as a completed basket transfer.
 The sidecar path is
 `meta/recorder_timing/episode-NNNNNN/{episode.json,frames.jsonl}`.
 The saved `dataset_root` is provenance and may differ after relocating a Dataset;
